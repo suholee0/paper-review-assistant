@@ -9,7 +9,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "open": "tsx scripts/open-paper.ts"
+    "paper:register": "tsx scripts/register-paper.ts",
+    "paper:serve": "tsx scripts/serve.ts",
+    "paper:list": "tsx scripts/list-papers.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.97",

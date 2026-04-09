@@ -1,11 +1,11 @@
 # Paper Review Tool
 
-Read academic papers with an AI research mate that auto-builds background knowledge and answers your questions.
+논문을 읽을 때 AI mate와 함께 깊게 이해할 수 있는 도구.
 
 ## Prerequisites
 
 - **Node.js** 18+
-- **Claude Code** installed and authenticated (`npm install -g @anthropic-ai/claude-code && claude` to log in)
+- **Claude Code** installed and authenticated
 
 ## Setup
 
@@ -16,43 +16,36 @@ npx prisma db push
 
 ## Usage
 
-### Open and analyze a paper
+### 1. 논문 등록
 
 ```bash
-npm run open -- "https://arxiv.org/abs/1706.03762"
+npm run paper:register -- "https://arxiv.org/abs/1706.03762"
 ```
 
-This will:
-1. Download the PDF
-2. Launch Claude Code in your terminal for analysis (you can watch and interact)
-3. After analysis completes, open the web UI in your browser
+### 2. Claude Code에서 분석
 
-You can also open a local PDF:
+Claude Code 터미널에서 이 프로젝트를 열고 분석을 요청한다:
+
+```
+이 논문을 분석해줘: https://arxiv.org/abs/1706.03762
+```
+
+Claude Code가 `CLAUDE.md`를 읽고 분석 워크플로우를 따라 실행한다.
+스키밍 → 배경지식 빌드 → 깊은 읽기까지 터미널에서 직접 확인 가능.
+
+### 3. 웹 UI에서 읽기 + 채팅
+
 ```bash
-npm run open -- ./path/to/paper.pdf
+npm run paper:serve -- <paper-id>
 ```
 
-### Just open the web UI (for previously analyzed papers)
-
-```bash
-npm run dev
-```
-
-Open http://localhost:3000
-
-## How it works
-
-1. **Analysis (terminal)**: Claude Code runs interactively, reading the paper, searching for background material, and writing knowledge documents. You see everything in your terminal.
-
-2. **Reading + Chat (web)**: The web UI shows the PDF with highlights, memos, and a chat panel. Chat uses the accumulated knowledge to give deep, contextual answers.
-
-No separate API key needed — uses your existing Claude Code authentication.
+PDF 뷰어 + 채팅 인터페이스가 브라우저에 열린다.
 
 ## Features
 
 - PDF viewer with page navigation and zoom
-- AI analysis: automatic background knowledge building (skim → parallel research → deep read)
-- Chat with AI about the paper (with text selection context, Cursor-style)
+- AI analysis: background knowledge building (skim → research → deep read)
+- Chat with AI about the paper (Cursor-style text selection context)
 - Multi-color highlighting with memos
 - Citation popover on hover
 - Resizable split layout
