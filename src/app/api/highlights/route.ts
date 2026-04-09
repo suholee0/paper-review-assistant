@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 
 export async function POST(request: Request) {
@@ -31,26 +31,24 @@ export async function GET(request: Request) {
   return NextResponse.json(highlights);
 }
 
-export async function PATCH(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
+export async function PATCH(request: NextRequest) {
+  const body = await request.json();
+  const { id, memo, color } = body;
 
   if (!id) {
     return NextResponse.json({ error: "id required" }, { status: 400 });
   }
 
-  const body = await request.json();
-  const { memo, color } = body;
+  const data: Record<string, string> = {};
+  if (memo !== undefined) data.memo = memo;
+  if (color !== undefined) data.color = color;
 
-  const updated = await prisma.highlight.update({
+  const highlight = await prisma.highlight.update({
     where: { id },
-    data: {
-      ...(memo !== undefined ? { memo } : {}),
-      ...(color !== undefined ? { color } : {}),
-    },
+    data,
   });
 
-  return NextResponse.json(updated);
+  return NextResponse.json(highlight);
 }
 
 export async function DELETE(request: Request) {

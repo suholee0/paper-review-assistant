@@ -37,13 +37,6 @@ export default function PdfViewer({
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.2);
-  const [paperId, setPaperId] = useState<string>("");
-
-  useEffect(() => {
-    // Extract paperId from fileUrl like /api/papers/{id}/pdf
-    const match = fileUrl.match(/\/api\/papers\/([^/]+)\/pdf/);
-    if (match) setPaperId(match[1]);
-  }, [fileUrl]);
 
   useEffect(() => {
     if (goToPage != null && goToPage >= 1 && goToPage <= numPages) {
@@ -62,27 +55,7 @@ export default function PdfViewer({
     }
   }, [currentPage, onTextSelect]);
 
-  function handleHighlightCreated(highlight: HighlightData) {
-    // HighlightLayer already calls the API; propagate to parent state via onAddHighlight
-    // But since HighlightLayer manages its own API calls, we just update parent state
-    onAddHighlight?.({
-      page: highlight.page,
-      startOffset: highlight.startOffset,
-      endOffset: highlight.endOffset,
-      color: highlight.color,
-    });
-  }
-
-  function handleHighlightUpdated(highlight: HighlightData) {
-    onUpdateMemo?.(highlight.id, highlight.memo ?? "");
-  }
-
-  function handleHighlightDeleted(id: string) {
-    onDeleteHighlight?.(id);
-  }
-
-  const showHighlightLayer =
-    paperId && (onAddHighlight || onDeleteHighlight || onUpdateMemo);
+  const showHighlightLayer = onAddHighlight || onDeleteHighlight || onUpdateMemo;
 
   return (
     <div className="flex flex-col h-full">
@@ -128,12 +101,11 @@ export default function PdfViewer({
             <Page pageNumber={currentPage} scale={scale} />
             {showHighlightLayer && (
               <HighlightLayer
-                paperId={paperId}
                 page={currentPage}
                 highlights={highlights}
-                onHighlightCreated={handleHighlightCreated}
-                onHighlightUpdated={handleHighlightUpdated}
-                onHighlightDeleted={handleHighlightDeleted}
+                onAddHighlight={(hl) => onAddHighlight?.(hl)}
+                onDeleteHighlight={(id) => onDeleteHighlight?.(id)}
+                onUpdateMemo={(id, memo) => onUpdateMemo?.(id, memo)}
               />
             )}
           </div>

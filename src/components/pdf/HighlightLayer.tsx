@@ -20,21 +20,19 @@ const COLOR_SWATCHES: Record<string, string> = {
 };
 
 interface Props {
-  paperId: string;
   page: number;
   highlights: HighlightData[];
-  onHighlightCreated: (highlight: HighlightData) => void;
-  onHighlightUpdated: (highlight: HighlightData) => void;
-  onHighlightDeleted: (id: string) => void;
+  onAddHighlight: (hl: { page: number; startOffset: number; endOffset: number; color: string }) => void;
+  onDeleteHighlight: (id: string) => void;
+  onUpdateMemo: (id: string, memo: string) => void;
 }
 
 export default function HighlightLayer({
-  paperId,
   page,
   highlights,
-  onHighlightCreated,
-  onHighlightUpdated,
-  onHighlightDeleted,
+  onAddHighlight,
+  onDeleteHighlight,
+  onUpdateMemo,
 }: Props) {
   const [selectedColor, setSelectedColor] = useState<string>("yellow");
   const [activeHighlight, setActiveHighlight] = useState<HighlightData | null>(null);
@@ -42,7 +40,7 @@ export default function HighlightLayer({
 
   const pageHighlights = highlights.filter((h) => h.page === page);
 
-  async function handleHighlight() {
+  function handleHighlight() {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
 
@@ -52,45 +50,23 @@ export default function HighlightLayer({
 
     if (startOffset === endOffset) return;
 
-    const body = { paperId, page, startOffset, endOffset, color: selectedColor };
-    const res = await fetch("/api/highlights", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (res.ok) {
-      const created: HighlightData = await res.json();
-      onHighlightCreated(created);
-    }
+    onAddHighlight({ page, startOffset, endOffset, color: selectedColor });
 
     selection.removeAllRanges();
   }
 
-  async function handleSaveMemo() {
+  function handleSaveMemo() {
     if (!activeHighlight) return;
 
-    const res = await fetch(`/api/highlights?id=${activeHighlight.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memo: memoText }),
-    });
-
-    if (res.ok) {
-      const updated: HighlightData = await res.json();
-      onHighlightUpdated(updated);
-      setActiveHighlight(null);
-      setMemoText("");
-    }
+    onUpdateMemo(activeHighlight.id, memoText);
+    setActiveHighlight(null);
+    setMemoText("");
   }
 
-  async function handleDelete(id: string) {
-    const res = await fetch(`/api/highlights?id=${id}`, { method: "DELETE" });
-    if (res.ok) {
-      onHighlightDeleted(id);
-      setActiveHighlight(null);
-      setMemoText("");
-    }
+  function handleDelete(id: string) {
+    onDeleteHighlight(id);
+    setActiveHighlight(null);
+    setMemoText("");
   }
 
   return (
