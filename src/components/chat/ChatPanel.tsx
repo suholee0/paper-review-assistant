@@ -48,20 +48,28 @@ export default function ChatPanel({ paperId, selectedText, onClearSelection }: P
         if (!reader) return;
 
         let fullContent = "";
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const text = decoder.decode(value);
-          const lines = text.split("\n\n").filter(Boolean);
+          buffer += decoder.decode(value, { stream: true });
 
-          for (const line of lines) {
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() || "";
+
+          for (const part of parts) {
+            const line = part.trim();
             if (line.startsWith("data: ")) {
-              const data = JSON.parse(line.slice(6));
-              if (data.type === "text") {
-                fullContent += data.content;
-                setStreamingContent(fullContent);
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.type === "text") {
+                  fullContent += data.content;
+                  setStreamingContent(fullContent);
+                }
+              } catch {
+                // skip malformed messages
               }
             }
           }

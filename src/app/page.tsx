@@ -13,14 +13,25 @@ export default function Home() {
     e.preventDefault();
     setLoading(true);
 
-    const res = await fetch("/api/papers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, title: title || url }),
-    });
+    try {
+      const res = await fetch("/api/papers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, title: title || url }),
+      });
 
-    const paper = await res.json();
-    router.push(`/paper/${paper.id}`);
+      if (!res.ok) {
+        alert("Failed to open paper. Please try again.");
+        return;
+      }
+
+      const paper = await res.json();
+      router.push(`/paper/${paper.id}`);
+    } catch {
+      alert("Failed to open paper. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -32,13 +43,24 @@ export default function Home() {
     formData.append("file", file);
     formData.append("title", file.name.replace(".pdf", ""));
 
-    const res = await fetch("/api/papers", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const res = await fetch("/api/papers", {
+        method: "POST",
+        body: formData,
+      });
 
-    const paper = await res.json();
-    router.push(`/paper/${paper.id}`);
+      if (!res.ok) {
+        alert("Failed to upload file. Please try again.");
+        return;
+      }
+
+      const paper = await res.json();
+      router.push(`/paper/${paper.id}`);
+    } catch {
+      alert("Failed to upload file. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

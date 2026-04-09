@@ -38,21 +38,24 @@ export default function PaperView({ paper }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ paperId: paper.id, ...hl }),
     });
+    if (!res.ok) return;
     const created = await res.json();
     setHighlights((prev) => [...prev, created]);
   }
 
   async function handleDeleteHighlight(id: string) {
-    await fetch(`/api/highlights?id=${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/highlights?id=${id}`, { method: "DELETE" });
+    if (!res.ok) return;
     setHighlights((prev) => prev.filter((h) => h.id !== id));
   }
 
   async function handleUpdateMemo(id: string, memo: string) {
-    await fetch("/api/highlights", {
+    const res = await fetch("/api/highlights", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, memo }),
     });
+    if (!res.ok) return;
     setHighlights((prev) =>
       prev.map((h) => (h.id === id ? { ...h, memo } : h))
     );

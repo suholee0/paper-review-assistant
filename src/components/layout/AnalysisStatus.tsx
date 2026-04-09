@@ -27,33 +27,44 @@ export default function AnalysisStatus({ paperId, onComplete }: Props) {
 
       if (!reader) return;
 
+      let buffer = "";
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const text = decoder.decode(value);
-        const lines = text.split("\n\n").filter(Boolean);
+        buffer += decoder.decode(value, { stream: true });
 
-        for (const line of lines) {
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+
+        for (const part of parts) {
+          const line = part.trim();
           if (line.startsWith("data: ")) {
-            const data = JSON.parse(line.slice(6));
-            setProgress(data);
+            try {
+              const data = JSON.parse(line.slice(6));
+              setProgress(data);
 
-            if (data.completedTopic) {
-              setCompletedTopics((prev) => [...prev, data.completedTopic]);
-            }
+              if (data.completedTopic) {
+                setCompletedTopics((prev) => [...prev, data.completedTopic]);
+              }
 
-            if (data.phase === "complete") {
-              setIsRunning(false);
-              onComplete();
-            }
+              if (data.phase === "complete") {
+                setIsRunning(false);
+                onComplete();
+              }
 
-            if (data.phase === "error") {
-              setIsRunning(false);
+              if (data.phase === "error") {
+                setIsRunning(false);
+              }
+            } catch {
+              // skip malformed messages
             }
           }
         }
       }
+    }).catch(() => {
+      setIsRunning(false);
     });
   }
 
