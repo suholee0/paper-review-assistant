@@ -67,7 +67,7 @@ export default function PaperView({ paper }: Props) {
         <h1 className="text-lg font-semibold truncate">{paper.title}</h1>
       </div>
 
-      <AnalysisStatus paperId={paper.id} onComplete={() => {}} />
+      <AnalysisStatus paperId={paper.id} />
 
       <ResizableLayout
         left={

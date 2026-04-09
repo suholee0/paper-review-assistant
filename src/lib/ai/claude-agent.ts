@@ -37,11 +37,26 @@ export class ClaudeAgentProvider implements AIProvider {
         prompt,
         options: sdkOptions,
       })) {
-        console.log("[claude-agent] Message type:", message.type);
-
         // Capture session ID from any message that has it
         if ("session_id" in message && message.session_id) {
           currentSessionId = message.session_id;
+        }
+
+        // Log assistant messages with actual content
+        if (message.type === "assistant" && "message" in message) {
+          const msg = message.message as { content?: Array<{ type: string; text?: string; name?: string; input?: unknown }> };
+          for (const block of msg.content || []) {
+            if (block.type === "text" && block.text) {
+              console.log("[claude]", block.text.slice(0, 200));
+            } else if (block.type === "tool_use") {
+              console.log("[claude] Tool:", block.name, JSON.stringify(block.input).slice(0, 150));
+            }
+          }
+        }
+
+        // Log tool results
+        if (message.type === "user") {
+          // user messages in SDK are typically tool results
         }
 
         // Real-time streaming text deltas

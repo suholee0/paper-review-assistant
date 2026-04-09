@@ -29,6 +29,10 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       try {
         // Phase 1: Skim
+        console.log("[analyze] Starting analysis for paper:", paper.id);
+        console.log("[analyze] Paper source:", paperSource);
+        console.log("[analyze] Paper dir:", paperDir);
+
         controller.enqueue(
           encoder.encode(sseEncode({ phase: "skimming", message: "Skimming paper..." }))
         );
@@ -36,14 +40,20 @@ export async function POST(request: NextRequest) {
         const skimPrompt = buildSkillPrompt("skim", { paperSource });
         let skimResult = "";
 
+        console.log("[analyze] Calling AI for skim...");
         for await (const chunk of provider.query({
           prompt: skimPrompt,
           cwd: paperDir,
         })) {
+          console.log("[analyze] Skim chunk:", chunk.type, chunk.type === "text" ? chunk.content.slice(0, 100) : "");
           if (chunk.type === "text") {
             skimResult += chunk.content;
           }
+          if (chunk.type === "error") {
+            console.error("[analyze] Skim error:", chunk.message);
+          }
         }
+        console.log("[analyze] Skim result length:", skimResult.length);
 
         let topics: Array<{ name: string; description: string }>;
         try {
@@ -124,6 +134,7 @@ export async function POST(request: NextRequest) {
           encoder.encode(sseEncode({ phase: "complete", message: "Analysis complete" }))
         );
       } catch (error) {
+        console.error("[analyze] Fatal error:", error);
         controller.enqueue(
           encoder.encode(sseEncode({
             phase: "error",

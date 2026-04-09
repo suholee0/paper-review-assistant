@@ -9,17 +9,31 @@ Read academic papers with an AI research mate that auto-builds background knowle
 
 ## Setup
 
-1. Install dependencies:
 ```bash
 npm install
-```
-
-2. Initialize the database:
-```bash
 npx prisma db push
 ```
 
-3. Start the dev server:
+## Usage
+
+### Open and analyze a paper
+
+```bash
+npm run open -- "https://arxiv.org/abs/1706.03762"
+```
+
+This will:
+1. Download the PDF
+2. Launch Claude Code in your terminal for analysis (you can watch and interact)
+3. After analysis completes, open the web UI in your browser
+
+You can also open a local PDF:
+```bash
+npm run open -- ./path/to/paper.pdf
+```
+
+### Just open the web UI (for previously analyzed papers)
+
 ```bash
 npm run dev
 ```
@@ -28,12 +42,11 @@ Open http://localhost:3000
 
 ## How it works
 
-This tool uses your existing Claude Code subscription — no separate API key or additional costs needed. The AI features are powered by the Claude Agent SDK, which uses the same authentication as your Claude Code CLI.
+1. **Analysis (terminal)**: Claude Code runs interactively, reading the paper, searching for background material, and writing knowledge documents. You see everything in your terminal.
 
-Make sure you're logged into Claude Code before using the AI features:
-```bash
-claude  # This will prompt you to log in if needed
-```
+2. **Reading + Chat (web)**: The web UI shows the PDF with highlights, memos, and a chat panel. Chat uses the accumulated knowledge to give deep, contextual answers.
+
+No separate API key needed — uses your existing Claude Code authentication.
 
 ## Features
 

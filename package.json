@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "open": "tsx scripts/open-paper.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.97",
@@ -32,6 +33,7 @@
     "eslint-config-next": "^15.3.0",
     "jsdom": "^26.1.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^3.1.1"
   }
