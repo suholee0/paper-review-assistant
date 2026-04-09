@@ -111,22 +111,34 @@ async function main() {
     });
   }
 
-  // 4. Build analysis prompt
+  // 4. Build analysis prompt and save to file (avoids shell escaping issues)
   const paperSource = isUrl ? input : pdfPath;
   const template = loadSkill("analyze");
   const prompt = buildPrompt(template, { paperSource, paperDir });
+  const promptFile = path.join(paperDir, ".prompt.txt");
+  fs.writeFileSync(promptFile, prompt);
+
+  // 5. Find claude binary
+  const claudePath = execSync("which claude", { encoding: "utf-8" }).trim();
+  if (!claudePath) {
+    console.error("Error: claude not found. Install with: npm install -g @anthropic-ai/claude-code");
+    process.exit(1);
+  }
 
   console.log(`\n🔬 Starting analysis in Claude Code...`);
   console.log(`   Paper dir: ${paperDir}`);
   console.log(`   You can see and interact with Claude below.\n`);
   console.log("─".repeat(60));
 
-  // 5. Run Claude interactively in the terminal
-  const claudeProcess = spawn("claude", ["-p", prompt, "--verbose"], {
+  // 6. Run Claude with prompt piped via stdin (no shell escaping needed)
+  const claudeProcess = spawn(claudePath, ["-p", "--verbose"], {
     cwd: paperDir,
-    stdio: "inherit", // User sees everything in their terminal
-    shell: true,
+    stdio: ["pipe", "inherit", "inherit"], // stdin: pipe, stdout/stderr: terminal
   });
+
+  // Pipe prompt via stdin
+  claudeProcess.stdin!.write(prompt);
+  claudeProcess.stdin!.end();
 
   await new Promise<void>((resolve, reject) => {
     claudeProcess.on("close", (code) => {
@@ -135,6 +147,9 @@ async function main() {
     });
     claudeProcess.on("error", reject);
   });
+
+  // Clean up prompt file
+  fs.unlinkSync(promptFile);
 
   console.log("\n" + "─".repeat(60));
   console.log(`✅ Analysis complete!`);
