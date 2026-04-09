@@ -39,7 +39,7 @@
 - **언어**: TypeScript
 - **PDF 뷰어**: @react-pdf-viewer/core
 - **DB**: SQLite + Prisma
-- **AI**: Claude Code SDK (@anthropic-ai/claude-code)
+- **AI**: Claude Agent SDK (@anthropic-ai/claude-agent-sdk)
 - **스트리밍**: Server-Sent Events (SSE)
 
 ### 시스템 구조
@@ -66,7 +66,7 @@ Next.js API Routes
 
 ### AI 연동
 
-- Claude Code SDK (`@anthropic-ai/claude-code`)를 우선 사용
+- Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`)를 사용
 - OAuth 토큰을 직접 다루거나 추출하지 않음 (ToS 준수)
 - 배포 시 Anthropic API 키 방식으로 전환 가능하도록 AI provider 추상화 레이어 설계
 - OpenClaw 사례 참고: Consumer 구독 토큰의 제3자 도구 사용은 Anthropic이 금지함
