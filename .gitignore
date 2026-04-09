@@ -42,6 +42,6 @@ next-env.d.ts
 /prisma/*.db
 /prisma/*.db-journal
 
-# papers and data
-papers/
-data/
+# papers and data (runtime storage, not source code)
+/papers/
+/data/
