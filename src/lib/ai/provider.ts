@@ -1,3 +1,5 @@
+import { ClaudeAgentProvider } from "./claude-agent";
+
 export type AIResponse =
   | { type: "text"; content: string }
   | { type: "progress"; message: string }
@@ -15,14 +17,11 @@ export interface AIProvider {
   query(options: AIQueryOptions): AsyncGenerator<AIResponse>;
 }
 
-let instance: ClaudeAgentProvider | null = null;
+let instance: AIProvider | null = null;
 
-export function getAIProvider(): ClaudeAgentProvider {
+export function getAIProvider(): AIProvider {
   if (!instance) {
     instance = new ClaudeAgentProvider();
   }
   return instance;
 }
-
-// Import ClaudeAgentProvider lazily to keep this file clean
-import { ClaudeAgentProvider } from "./claude-agent";
