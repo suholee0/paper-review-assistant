@@ -14,23 +14,31 @@ export class ClaudeAgentProvider implements AIProvider {
     try {
       let currentSessionId = "";
 
+      console.log("[claude-agent] Starting query, prompt length:", prompt.length);
+      console.log("[claude-agent] cwd:", cwd, "sessionId:", sessionId);
+
+      // Default tools needed for paper analysis: file ops + web access
+      const defaultAllowedTools = [
+        "Read", "Write", "Edit",
+        "Bash", "Glob", "Grep",
+        "WebSearch", "WebFetch",
+      ];
+
       const sdkOptions: Record<string, unknown> = {
         cwd: cwd || process.cwd(),
-        permissionMode: "acceptEdits" as const,
+        allowedTools: allowedTools || defaultAllowedTools,
       };
 
       if (sessionId) {
         sdkOptions.resume = sessionId;
       }
 
-      if (allowedTools && allowedTools.length > 0) {
-        sdkOptions.allowedTools = allowedTools;
-      }
-
       for await (const message of query({
         prompt,
         options: sdkOptions,
       })) {
+        console.log("[claude-agent] Message type:", message.type);
+
         // Capture session ID from any message that has it
         if ("session_id" in message && message.session_id) {
           currentSessionId = message.session_id;
@@ -67,6 +75,7 @@ export class ClaudeAgentProvider implements AIProvider {
         }
       }
     } catch (err) {
+      console.error("[claude-agent] Error:", err);
       const message = err instanceof Error ? err.message : String(err);
       yield { type: "error", message };
     }
