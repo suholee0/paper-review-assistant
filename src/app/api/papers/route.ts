@@ -2,6 +2,55 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { savePdf, createPaperDir } from "@/lib/papers";
 
+/**
+ * Try to derive a PDF download URL from a paper URL.
+ * Supports arXiv and direct PDF links.
+ */
+function getPdfDownloadUrl(url: string): string | null {
+  // arXiv abstract page → PDF
+  // https://arxiv.org/abs/1706.03762 → https://arxiv.org/pdf/1706.03762
+  const arxivAbsMatch = url.match(/arxiv\.org\/abs\/(.+?)(?:\?|$)/);
+  if (arxivAbsMatch) {
+    return `https://arxiv.org/pdf/${arxivAbsMatch[1]}`;
+  }
+
+  // Already a direct PDF link
+  if (url.endsWith(".pdf")) {
+    return url;
+  }
+
+  // arXiv PDF page (already correct)
+  if (url.includes("arxiv.org/pdf/")) {
+    return url;
+  }
+
+  return null;
+}
+
+async function downloadPdf(url: string): Promise<Buffer | null> {
+  const pdfUrl = getPdfDownloadUrl(url);
+  if (!pdfUrl) return null;
+
+  try {
+    console.log("[papers] Downloading PDF from:", pdfUrl);
+    const res = await fetch(pdfUrl, {
+      headers: { "User-Agent": "PaperReviewTool/1.0" },
+      redirect: "follow",
+    });
+
+    if (!res.ok) {
+      console.error("[papers] PDF download failed:", res.status);
+      return null;
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  } catch (err) {
+    console.error("[papers] PDF download error:", err);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get("content-type") || "";
 
@@ -48,6 +97,19 @@ export async function POST(request: NextRequest) {
   });
 
   createPaperDir(paper.id);
+
+  // Try to download PDF from URL
+  if (url) {
+    const pdfBuffer = await downloadPdf(url);
+    if (pdfBuffer) {
+      const filePath = savePdf(paper.id, pdfBuffer);
+      const updated = await prisma.paper.update({
+        where: { id: paper.id },
+        data: { filePath },
+      });
+      return NextResponse.json(updated, { status: 201 });
+    }
+  }
 
   return NextResponse.json(paper, { status: 201 });
 }

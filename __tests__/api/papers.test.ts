@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Mock fetch globally to prevent actual PDF downloads in tests
+vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+  ok: false,
+  status: 404,
+}));
+
 vi.mock("@/lib/db", () => ({
   prisma: {
     paper: {
       create: vi.fn(),
+      update: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
     },
