@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/papers.db"
+}
+
+model Paper {
+  id            String      @id @default(uuid())
+  title         String
+  url           String?
+  filePath      String
+  chatSessionId String?
+  createdAt     DateTime    @default(now())
+  highlights    Highlight[]
+}
+
+model Highlight {
+  id          String   @id @default(uuid())
+  paperId     String
+  paper       Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+  page        Int
+  startOffset Int
+  endOffset   Int
+  color       String   @default("yellow")
+  memo        String?
+  createdAt   DateTime @default(now())
+}
