@@ -1,21 +1,55 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import HighlightLayer from "./HighlightLayer";
+import CitationPopover from "./CitationPopover";
+import type { HighlightData } from "@/types";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PdfViewerProps {
   fileUrl: string;
   onTextSelect?: (text: string, page: number) => void;
+  highlights?: HighlightData[];
+  goToPage?: number | null;
+  onAddHighlight?: (hl: {
+    page: number;
+    startOffset: number;
+    endOffset: number;
+    color: string;
+  }) => void;
+  onDeleteHighlight?: (id: string) => void;
+  onUpdateMemo?: (id: string, memo: string) => void;
 }
 
-export default function PdfViewer({ fileUrl, onTextSelect }: PdfViewerProps) {
+export default function PdfViewer({
+  fileUrl,
+  onTextSelect,
+  highlights = [],
+  goToPage,
+  onAddHighlight,
+  onDeleteHighlight,
+  onUpdateMemo,
+}: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.2);
+  const [paperId, setPaperId] = useState<string>("");
+
+  useEffect(() => {
+    // Extract paperId from fileUrl like /api/papers/{id}/pdf
+    const match = fileUrl.match(/\/api\/papers\/([^/]+)\/pdf/);
+    if (match) setPaperId(match[1]);
+  }, [fileUrl]);
+
+  useEffect(() => {
+    if (goToPage != null && goToPage >= 1 && goToPage <= numPages) {
+      setCurrentPage(goToPage);
+    }
+  }, [goToPage, numPages]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -27,6 +61,28 @@ export default function PdfViewer({ fileUrl, onTextSelect }: PdfViewerProps) {
       onTextSelect?.(selection.toString().trim(), currentPage);
     }
   }, [currentPage, onTextSelect]);
+
+  function handleHighlightCreated(highlight: HighlightData) {
+    // HighlightLayer already calls the API; propagate to parent state via onAddHighlight
+    // But since HighlightLayer manages its own API calls, we just update parent state
+    onAddHighlight?.({
+      page: highlight.page,
+      startOffset: highlight.startOffset,
+      endOffset: highlight.endOffset,
+      color: highlight.color,
+    });
+  }
+
+  function handleHighlightUpdated(highlight: HighlightData) {
+    onUpdateMemo?.(highlight.id, highlight.memo ?? "");
+  }
+
+  function handleHighlightDeleted(id: string) {
+    onDeleteHighlight?.(id);
+  }
+
+  const showHighlightLayer =
+    paperId && (onAddHighlight || onDeleteHighlight || onUpdateMemo);
 
   return (
     <div className="flex flex-col h-full">
@@ -68,9 +124,23 @@ export default function PdfViewer({ fileUrl, onTextSelect }: PdfViewerProps) {
       {/* PDF Content */}
       <div className="flex-1 overflow-auto bg-gray-200 p-4" onMouseUp={handleMouseUp}>
         <Document file={fileUrl} onLoadSuccess={onDocumentLoadSuccess}>
-          <Page pageNumber={currentPage} scale={scale} />
+          <div className="relative">
+            <Page pageNumber={currentPage} scale={scale} />
+            {showHighlightLayer && (
+              <HighlightLayer
+                paperId={paperId}
+                page={currentPage}
+                highlights={highlights}
+                onHighlightCreated={handleHighlightCreated}
+                onHighlightUpdated={handleHighlightUpdated}
+                onHighlightDeleted={handleHighlightDeleted}
+              />
+            )}
+          </div>
         </Document>
       </div>
+
+      <CitationPopover references={[]} />
     </div>
   );
 }

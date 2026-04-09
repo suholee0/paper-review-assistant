@@ -3,17 +3,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Paper Review Tool",
-  description: "A local web app for reading academic papers with AI assistance",
+  description: "Read papers with an AI research mate",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
