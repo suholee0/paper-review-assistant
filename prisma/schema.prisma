@@ -22,8 +22,8 @@ model Highlight {
   paperId     String
   paper       Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
   page        Int
-  startOffset Int
-  endOffset   Int
+  rects       String   // JSON: [{top, left, width, height}] as percentages relative to page
+  text        String   @default("")  // The highlighted text
   color       String   @default("yellow")
   memo        String?
   createdAt   DateTime @default(now())

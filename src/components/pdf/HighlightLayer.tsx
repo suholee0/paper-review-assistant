@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { HighlightData } from "@/types";
+import type { HighlightData, HighlightRect } from "@/types";
 
 const COLOR_MAP: Record<string, string> = {
   yellow: "bg-yellow-200/50",
@@ -22,7 +22,7 @@ const COLOR_SWATCHES: Record<string, string> = {
 interface Props {
   page: number;
   highlights: HighlightData[];
-  onAddHighlight: (hl: { page: number; startOffset: number; endOffset: number; color: string }) => void;
+  onAddHighlight: (hl: { page: number; rects: HighlightRect[]; text: string; color: string }) => void;
   onDeleteHighlight: (id: string) => void;
   onUpdateMemo: (id: string, memo: string) => void;
 }
@@ -45,13 +45,31 @@ export default function HighlightLayer({
     if (!selection || selection.isCollapsed) return;
 
     const range = selection.getRangeAt(0);
-    const startOffset = range.startOffset;
-    const endOffset = range.endOffset;
+    const selectedText = selection.toString().trim();
+    if (!selectedText) return;
 
-    if (startOffset === endOffset) return;
+    // Find the PDF page container
+    const pageEl = document.querySelector('.react-pdf__Page');
+    if (!pageEl) return;
+    const pageBounds = pageEl.getBoundingClientRect();
 
-    onAddHighlight({ page, startOffset, endOffset, color: selectedColor });
+    // Get client rects and convert to percentages
+    const clientRects = range.getClientRects();
+    const rects: HighlightRect[] = [];
 
+    for (let i = 0; i < clientRects.length; i++) {
+      const r = clientRects[i];
+      rects.push({
+        top: ((r.top - pageBounds.top) / pageBounds.height) * 100,
+        left: ((r.left - pageBounds.left) / pageBounds.width) * 100,
+        width: (r.width / pageBounds.width) * 100,
+        height: (r.height / pageBounds.height) * 100,
+      });
+    }
+
+    if (rects.length === 0) return;
+
+    onAddHighlight({ page, rects, text: selectedText, color: selectedColor });
     selection.removeAllRanges();
   }
 
@@ -70,9 +88,9 @@ export default function HighlightLayer({
   }
 
   return (
-    <div className="relative">
+    <div className="absolute inset-0 pointer-events-none">
       {/* Color picker toolbar */}
-      <div className="flex items-center gap-1 mb-1">
+      <div className="flex items-center gap-1 mb-1 pointer-events-auto absolute top-0 left-0 z-10 bg-white/80 rounded p-1">
         {COLORS.map((color) => (
           <button
             key={color}
@@ -94,28 +112,32 @@ export default function HighlightLayer({
 
       {/* Highlight overlays */}
       {pageHighlights.map((hl) => (
-        <button
-          key={hl.id}
-          onClick={() => {
-            setActiveHighlight(hl);
-            setMemoText(hl.memo ?? "");
-          }}
-          className={`absolute cursor-pointer ${COLOR_MAP[hl.color] ?? "bg-yellow-200/50"} rounded`}
-          style={{
-            left: `${hl.startOffset}px`,
-            top: 0,
-            width: `${hl.endOffset - hl.startOffset}px`,
-            height: "1.2em",
-          }}
-          title={hl.memo ?? "Click to add memo"}
-        />
+        <div key={hl.id} className="absolute inset-0 pointer-events-none">
+          {hl.rects.map((rect, i) => (
+            <button
+              key={i}
+              onClick={(e) => { e.stopPropagation(); setActiveHighlight(hl); setMemoText(hl.memo ?? ""); }}
+              className={`absolute pointer-events-auto cursor-pointer ${COLOR_MAP[hl.color] ?? "bg-yellow-200/50"}`}
+              style={{
+                top: `${rect.top}%`,
+                left: `${rect.left}%`,
+                width: `${rect.width}%`,
+                height: `${rect.height}%`,
+              }}
+              title={hl.memo ?? hl.text ?? "Click to add memo"}
+            />
+          ))}
+        </div>
       ))}
 
       {/* Memo editor popup */}
       {activeHighlight && (
-        <div className="absolute z-20 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-64"
+        <div className="absolute z-20 bg-white border border-gray-200 rounded-lg shadow-lg p-3 w-64 pointer-events-auto"
           style={{ top: "2rem", left: 0 }}
         >
+          {activeHighlight.text && (
+            <p className="text-xs text-gray-500 mb-2 italic truncate">&ldquo;{activeHighlight.text}&rdquo;</p>
+          )}
           <textarea
             className="w-full text-sm border border-gray-200 rounded p-1 resize-none"
             rows={3}

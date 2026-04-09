@@ -84,7 +84,7 @@ export default function HighlightList({ highlights, onNavigate }: Props) {
                     />
                     <span className="text-xs text-gray-500 shrink-0">p.{hl.page}</span>
                     <span className="text-xs text-gray-700 truncate">
-                      {hl.memo ?? <span className="italic text-gray-400">No memo</span>}
+                      {hl.text || hl.memo || <span className="italic text-gray-400">No memo</span>}
                     </span>
                   </button>
                 </li>

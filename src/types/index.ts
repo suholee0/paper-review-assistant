@@ -1,3 +1,5 @@
+export type { ReferenceInfo } from "@/lib/references";
+
 export interface PaperMeta {
   id: string;
   title: string;
@@ -7,12 +9,19 @@ export interface PaperMeta {
   createdAt: Date;
 }
 
+export interface HighlightRect {
+  top: number;    // percentage (0-100)
+  left: number;   // percentage (0-100)
+  width: number;  // percentage (0-100)
+  height: number; // percentage (0-100)
+}
+
 export interface HighlightData {
   id: string;
   paperId: string;
   page: number;
-  startOffset: number;
-  endOffset: number;
+  rects: HighlightRect[]; // parsed from JSON
+  text: string;
   color: string;
   memo: string | null;
   createdAt: Date;

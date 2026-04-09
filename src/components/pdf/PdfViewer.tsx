@@ -6,7 +6,9 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import HighlightLayer from "./HighlightLayer";
 import CitationPopover from "./CitationPopover";
-import type { HighlightData } from "@/types";
+import type { HighlightData, HighlightRect } from "@/types";
+import { extractReferences } from "@/lib/references";
+import type { ReferenceInfo } from "@/lib/references";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -17,8 +19,8 @@ interface PdfViewerProps {
   goToPage?: number | null;
   onAddHighlight?: (hl: {
     page: number;
-    startOffset: number;
-    endOffset: number;
+    rects: HighlightRect[];
+    text: string;
     color: string;
   }) => void;
   onDeleteHighlight?: (id: string) => void;
@@ -37,12 +39,22 @@ export default function PdfViewer({
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.2);
+  const [references, setReferences] = useState<ReferenceInfo[]>([]);
 
   useEffect(() => {
     if (goToPage != null && goToPage >= 1 && goToPage <= numPages) {
       setCurrentPage(goToPage);
     }
   }, [goToPage, numPages]);
+
+  useEffect(() => {
+    if (!fileUrl) return;
+    pdfjs.getDocument(fileUrl).promise.then(async (pdf) => {
+      // Cast to the minimal interface expected by extractReferences
+      const refs = await extractReferences(pdf as Parameters<typeof extractReferences>[0]);
+      setReferences(refs);
+    }).catch(() => {});
+  }, [fileUrl]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -112,7 +124,7 @@ export default function PdfViewer({
         </Document>
       </div>
 
-      <CitationPopover references={[]} />
+      <CitationPopover references={references} />
     </div>
   );
 }

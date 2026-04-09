@@ -6,7 +6,7 @@ import ChatPanel from "@/components/chat/ChatPanel";
 import AnalysisStatus from "@/components/layout/AnalysisStatus";
 import ResizableLayout from "@/components/layout/ResizableLayout";
 import HighlightList from "@/components/highlights/HighlightList";
-import type { PaperMeta, HighlightData } from "@/types";
+import type { PaperMeta, HighlightData, HighlightRect } from "@/types";
 
 interface Props {
   paper: PaperMeta;
@@ -29,14 +29,14 @@ export default function PaperView({ paper }: Props) {
 
   async function handleAddHighlight(hl: {
     page: number;
-    startOffset: number;
-    endOffset: number;
+    rects: HighlightRect[];
+    text: string;
     color: string;
   }) {
     const res = await fetch("/api/highlights", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paperId: paper.id, ...hl }),
+      body: JSON.stringify({ paperId: paper.id, ...hl, rects: JSON.stringify(hl.rects) }),
     });
     if (!res.ok) return;
     const created = await res.json();

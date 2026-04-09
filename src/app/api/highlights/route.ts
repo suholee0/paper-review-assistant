@@ -3,20 +3,20 @@ import { prisma } from "@/lib/db";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { paperId, page, startOffset, endOffset, color, memo } = body;
+  const { paperId, page, rects, text, color, memo } = body;
 
   const highlight = await prisma.highlight.create({
     data: {
       paperId,
       page,
-      startOffset,
-      endOffset,
+      rects: typeof rects === "string" ? rects : JSON.stringify(rects),
+      text: text ?? "",
       color: color ?? "yellow",
       memo: memo ?? null,
     },
   });
 
-  return NextResponse.json(highlight, { status: 201 });
+  return NextResponse.json({ ...highlight, rects: JSON.parse(highlight.rects) }, { status: 201 });
 }
 
 export async function GET(request: Request) {
@@ -28,7 +28,8 @@ export async function GET(request: Request) {
     orderBy: { createdAt: "asc" },
   });
 
-  return NextResponse.json(highlights);
+  const parsed = highlights.map((h) => ({ ...h, rects: JSON.parse(h.rects) }));
+  return NextResponse.json(parsed);
 }
 
 export async function PATCH(request: NextRequest) {
@@ -48,7 +49,7 @@ export async function PATCH(request: NextRequest) {
     data,
   });
 
-  return NextResponse.json(highlight);
+  return NextResponse.json({ ...highlight, rects: JSON.parse(highlight.rects) });
 }
 
 export async function DELETE(request: Request) {
