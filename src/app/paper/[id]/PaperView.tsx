@@ -6,7 +6,7 @@ import ChatPanel from "@/components/chat/ChatPanel";
 import AnalysisStatus from "@/components/layout/AnalysisStatus";
 import ResizableLayout from "@/components/layout/ResizableLayout";
 import HighlightList from "@/components/highlights/HighlightList";
-import type { PaperMeta, HighlightData, HighlightRect } from "@/types";
+import type { PaperMeta, HighlightData, HighlightRect, HighlightColor } from "@/types";
 
 interface Props {
   paper: PaperMeta;
@@ -31,7 +31,7 @@ export default function PaperView({ paper }: Props) {
     page: number;
     rects: HighlightRect[];
     text: string;
-    color: string;
+    color: HighlightColor;
   }) {
     const res = await fetch("/api/highlights", {
       method: "POST",
@@ -80,6 +80,7 @@ export default function PaperView({ paper }: Props) {
               onAddHighlight={handleAddHighlight}
               onDeleteHighlight={handleDeleteHighlight}
               onUpdateMemo={handleUpdateMemo}
+              onAskAI={(text) => setSelectedText(text)}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">

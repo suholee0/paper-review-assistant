@@ -2,15 +2,9 @@
 
 import { useState } from "react";
 import type { HighlightData } from "@/types";
+import { HIGHLIGHT_COLORS, COLOR_DOTS } from "@/constants/highlight";
 
-const COLOR_DOTS: Record<string, string> = {
-  yellow: "bg-yellow-400",
-  green: "bg-green-400",
-  blue: "bg-blue-400",
-  pink: "bg-pink-400",
-};
-
-const FILTER_OPTIONS = ["All", "yellow", "green", "blue", "pink"] as const;
+const FILTER_OPTIONS = ["All", ...HIGHLIGHT_COLORS] as const;
 type FilterOption = (typeof FILTER_OPTIONS)[number];
 
 interface Props {

@@ -1,9 +1,22 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { isHighlightColor } from "@/constants/highlight";
 
 export async function POST(request: Request) {
   const body = await request.json();
   const { paperId, page, rects, text, color, memo } = body;
+
+  if (!paperId || typeof paperId !== "string") {
+    return NextResponse.json({ error: "paperId is required" }, { status: 400 });
+  }
+  if (typeof page !== "number" || page < 1) {
+    return NextResponse.json({ error: "page must be a positive number" }, { status: 400 });
+  }
+  if (!rects) {
+    return NextResponse.json({ error: "rects is required" }, { status: 400 });
+  }
+
+  const safeColor = typeof color === "string" && isHighlightColor(color) ? color : "yellow";
 
   const highlight = await prisma.highlight.create({
     data: {
@@ -11,7 +24,7 @@ export async function POST(request: Request) {
       page,
       rects: typeof rects === "string" ? rects : JSON.stringify(rects),
       text: text ?? "",
-      color: color ?? "yellow",
+      color: safeColor,
       memo: memo ?? null,
     },
   });
@@ -36,13 +49,15 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json();
   const { id, memo, color } = body;
 
-  if (!id) {
-    return NextResponse.json({ error: "id required" }, { status: 400 });
+  if (!id || typeof id !== "string") {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
 
   const data: Record<string, string> = {};
   if (memo !== undefined) data.memo = memo;
-  if (color !== undefined) data.color = color;
+  if (color !== undefined && typeof color === "string" && isHighlightColor(color)) {
+    data.color = color;
+  }
 
   const highlight = await prisma.highlight.update({
     where: { id },

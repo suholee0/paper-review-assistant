@@ -1,4 +1,7 @@
+import type { HighlightColor } from "@/constants/highlight";
+
 export type { ReferenceInfo } from "@/lib/references";
+export type { HighlightColor } from "@/constants/highlight";
 
 export interface PaperMeta {
   id: string;
@@ -22,7 +25,7 @@ export interface HighlightData {
   page: number;
   rects: HighlightRect[]; // parsed from JSON
   text: string;
-  color: string;
+  color: HighlightColor;
   memo: string | null;
   createdAt: Date;
 }
