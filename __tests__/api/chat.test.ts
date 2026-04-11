@@ -117,9 +117,11 @@ describe("POST /api/chat", () => {
     expect(response.headers.get("Content-Type")).toBe("text/event-stream");
 
     // Verify the AI was called with context included in prompt
-    expect(mockQuery).toHaveBeenCalled();
-    const callArgs = mockQuery.mock.calls[0][0];
-    expect(callArgs.prompt).toContain("The attention mechanism allows...");
-    expect(callArgs.sessionId).toBe("existing-session");
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining("The attention mechanism allows..."),
+        sessionId: "existing-session",
+      })
+    );
   });
 });

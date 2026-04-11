@@ -24,14 +24,25 @@ const next = spawn("npx", ["next", "dev", "-p", port], {
   stdio: "inherit",
 });
 
+function openUrl(target: string): void {
+  const platform = process.platform;
+  try {
+    if (platform === "darwin") {
+      execSync(`open "${target}"`, { stdio: "ignore" });
+    } else if (platform === "win32") {
+      execSync(`start "" "${target}"`, { stdio: "ignore" });
+    } else {
+      execSync(`xdg-open "${target}"`, { stdio: "ignore" });
+    }
+  } catch {
+    console.log(`Open manually: ${target}`);
+  }
+}
+
 // Wait for server to start, then open browser
 setTimeout(() => {
   console.log(`Opening ${url}`);
-  try {
-    execSync(`open "${url}"`, { stdio: "ignore" });
-  } catch {
-    console.log(`Open manually: ${url}`);
-  }
+  openUrl(url);
 }, 3000);
 
 process.on("SIGINT", () => {

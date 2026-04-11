@@ -45,3 +45,6 @@ next-env.d.ts
 # papers and data (runtime storage, not source code)
 /papers/
 /data/
+
+# superpowers workflow artifacts (specs and plans are personal workflow)
+/docs/superpowers/

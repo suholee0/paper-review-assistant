@@ -55,7 +55,7 @@ describe("POST /api/papers", () => {
       }),
     });
 
-    const response = await POST(request);
+    const response = await POST(request as any);
     const data = await response.json();
 
     expect(response.status).toBe(201);
