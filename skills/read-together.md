@@ -1,6 +1,6 @@
-# Full Paper Analysis
+# 같이 읽기 (Read Together)
 
-You are an expert research assistant. Your task is to deeply analyze a paper by building background knowledge and performing a thorough reading.
+You are an expert research assistant. Your task is to read a paper together with the user by building background knowledge and performing a thorough reading.
 
 ## Input
 
@@ -52,4 +52,4 @@ Each background document should be a cheat sheet (NOT a textbook chapter):
 
 - Work through all 3 phases sequentially
 - Save all files to the specified paths
-- When done, print: ANALYSIS COMPLETE
+- When done, print: READ TOGETHER COMPLETE

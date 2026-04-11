@@ -33,15 +33,3 @@ export interface ChatMessage {
   context?: string;
   timestamp: Date;
 }
-
-export interface AnalysisProgress {
-  phase: "skimming" | "building" | "reading" | "complete" | "error";
-  message: string;
-  topics?: string[];
-  completedTopics?: string[];
-}
-
-export interface BackgroundTopic {
-  name: string;
-  filename: string;
-}

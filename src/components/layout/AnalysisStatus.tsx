@@ -26,15 +26,14 @@ export default function AnalysisStatus({ paperId }: Props) {
   if (!status.analyzed && status.backgroundTopics.length === 0) {
     return (
       <div className="p-3 border-b bg-amber-50 text-sm text-amber-800">
-        Analysis not yet run. Use the terminal to analyze:{" "}
-        <code className="bg-amber-100 px-1 rounded">npm run open &lt;url&gt;</code>
+        아직 같이 읽기를 하지 않았습니다. Claude Code 터미널에서 같이 읽기를 시작하세요.
       </div>
     );
   }
 
   return (
     <div className="p-3 border-b bg-green-50 text-sm">
-      <span className="text-green-700 font-medium">Analysis complete</span>
+      <span className="text-green-700 font-medium">같이 읽기 완료</span>
       {status.backgroundTopics.length > 0 && (
         <div className="mt-1 flex flex-wrap gap-1">
           {status.backgroundTopics.map((topic) => (

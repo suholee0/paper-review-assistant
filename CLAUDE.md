@@ -24,9 +24,18 @@ npx tsx scripts/list-papers.ts
 ```
 등록된 논문 목록 + 분석 상태 JSON 출력.
 
-## Analysis Workflow
+## 같이 읽기 (Read Together) Workflow
 
-논문 분석은 Claude Code가 직접 수행한다. 전체 흐름을 한번에 하려면 `skills/analyze.md`를 참조.
+논문을 같이 읽기 위한 워크플로우. Claude Code가 직접 수행한다. 전체 흐름은 `skills/read-together.md`를 참조.
+
+### 이미 분석된 논문 확인
+
+같이 읽기를 시작하기 전에 먼저 해당 논문이 이미 분석되었는지 확인한다:
+1. `papers/<id>/analysis.md` 파일이 존재하는지 확인
+2. 존재하면 분석 과정을 스킵하고 바로 웹 UI를 띄운다:
+   ```bash
+   npx tsx scripts/serve.ts <paper-id>
+   ```
 
 ### Phase 1: 스키밍
 논문을 읽고 배경지식이 필요한 토픽을 식별한다.
@@ -41,7 +50,7 @@ npx tsx scripts/list-papers.ts
 배경지식을 참조하여 논문을 섹션별로 심층 분석한다.
 - 결과: `papers/<id>/analysis.md`
 
-### 분석 완료 후
+### 같이 읽기 완료 후
 ```bash
 npx tsx scripts/serve.ts <paper-id>
 ```
