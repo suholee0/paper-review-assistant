@@ -3,6 +3,7 @@ import { ClaudeAgentProvider } from "./claude-agent";
 export type AIResponse =
   | { type: "text"; content: string }
   | { type: "progress"; message: string }
+  | { type: "tool_use"; name: string; summary: string }
   | { type: "done"; sessionId: string }
   | { type: "error"; message: string };
 
@@ -11,6 +12,7 @@ export interface AIQueryOptions {
   sessionId?: string;
   cwd?: string;
   allowedTools?: string[];
+  model?: string;
 }
 
 export interface AIProvider {

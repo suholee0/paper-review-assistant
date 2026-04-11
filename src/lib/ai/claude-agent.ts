@@ -1,5 +1,44 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import path from "path";
 import type { AIProvider, AIQueryOptions, AIResponse } from "./provider";
+
+/**
+ * Convert a tool_use block into a user-friendly progress message.
+ * Shown in the chat UI to indicate what the AI is currently doing.
+ */
+function summarizeToolUse(name: string, input: unknown): string {
+  const inp = (input ?? {}) as Record<string, unknown>;
+
+  switch (name) {
+    case "Read": {
+      const filePath = typeof inp.file_path === "string" ? inp.file_path : "";
+      const base = filePath ? path.basename(filePath) : "파일";
+      return `📖 ${base} 읽는 중`;
+    }
+    case "Glob": {
+      const pattern = typeof inp.pattern === "string" ? inp.pattern : "";
+      return `🔍 파일 검색 중: ${pattern}`;
+    }
+    case "Grep": {
+      const pattern = typeof inp.pattern === "string" ? inp.pattern : "";
+      return `🔍 내용 검색 중: ${pattern}`;
+    }
+    case "WebSearch": {
+      const q = typeof inp.query === "string" ? inp.query : "";
+      return `🌐 웹 검색 중: ${q}`;
+    }
+    case "WebFetch": {
+      const url = typeof inp.url === "string" ? inp.url : "";
+      return `🌐 페이지 가져오는 중: ${url}`;
+    }
+    case "Bash": {
+      const cmd = typeof inp.command === "string" ? inp.command : "";
+      return `⚙️ 명령 실행 중: ${cmd.slice(0, 60)}`;
+    }
+    default:
+      return `🔧 ${name} 실행 중`;
+  }
+}
 
 /**
  * ClaudeAgentProvider wraps @anthropic-ai/claude-agent-sdk.
@@ -9,7 +48,7 @@ import type { AIProvider, AIQueryOptions, AIResponse } from "./provider";
  */
 export class ClaudeAgentProvider implements AIProvider {
   async *query(options: AIQueryOptions): AsyncGenerator<AIResponse> {
-    const { prompt, sessionId, cwd, allowedTools } = options;
+    const { prompt, sessionId, cwd, allowedTools, model } = options;
 
     try {
       let currentSessionId = "";
@@ -29,6 +68,10 @@ export class ClaudeAgentProvider implements AIProvider {
         allowedTools: allowedTools || defaultAllowedTools,
       };
 
+      if (model) {
+        sdkOptions.model = model;
+      }
+
       if (sessionId) {
         sdkOptions.resume = sessionId;
       }
@@ -42,14 +85,19 @@ export class ClaudeAgentProvider implements AIProvider {
           currentSessionId = message.session_id;
         }
 
-        // Log assistant messages with actual content
+        // Handle assistant messages: log text content and emit tool_use progress
         if (message.type === "assistant" && "message" in message) {
           const msg = message.message as { content?: Array<{ type: string; text?: string; name?: string; input?: unknown }> };
           for (const block of msg.content || []) {
             if (block.type === "text" && block.text) {
               console.log("[claude]", block.text.slice(0, 200));
-            } else if (block.type === "tool_use") {
+            } else if (block.type === "tool_use" && block.name) {
               console.log("[claude] Tool:", block.name, JSON.stringify(block.input).slice(0, 150));
+              yield {
+                type: "tool_use",
+                name: block.name,
+                summary: summarizeToolUse(block.name, block.input),
+              };
             }
           }
         }

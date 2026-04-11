@@ -2,13 +2,21 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAIProvider } from "@/lib/ai/provider";
 import { getPaperDir } from "@/lib/papers";
-
-function sseEncode(data: unknown): string {
-  return `data: ${JSON.stringify(data)}\n\n`;
-}
+import { sseEncode } from "@/lib/sse";
+import { DEFAULT_CHAT_MODEL } from "@/constants/models";
 
 export async function POST(request: NextRequest) {
-  const { paperId, message, context } = await request.json();
+  const body = await request.json();
+  const { paperId, message, context, model } = body;
+
+  if (!paperId || typeof paperId !== "string") {
+    return new Response(JSON.stringify({ error: "paperId is required" }), { status: 400 });
+  }
+  if (!message || typeof message !== "string") {
+    return new Response(JSON.stringify({ error: "message is required" }), { status: 400 });
+  }
+
+  const chatModel = typeof model === "string" && model ? model : DEFAULT_CHAT_MODEL;
   const paper = await prisma.paper.findUnique({ where: { id: paperId } });
 
   if (!paper) {
@@ -43,9 +51,17 @@ export async function POST(request: NextRequest) {
           prompt,
           sessionId: paper.chatSessionId || undefined,
           cwd: paperDir,
+          model: chatModel,
         })) {
           if (chunk.type === "text") {
             controller.enqueue(encoder.encode(sseEncode({ type: "text", content: chunk.content })));
+          }
+          if (chunk.type === "tool_use") {
+            controller.enqueue(encoder.encode(sseEncode({
+              type: "tool_use",
+              name: chunk.name,
+              summary: chunk.summary,
+            })));
           }
           if (chunk.type === "done" && chunk.sessionId) {
             if (!paper.chatSessionId) {
