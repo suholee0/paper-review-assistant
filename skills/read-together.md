@@ -30,7 +30,7 @@ For EACH topic in topics.json, dispatch a subagent with:
 - Paper source (URL or file path) for context
 - Output path: `{{paperDir}}/background/<topic-name>.md`
 - Instructions to research via web search and write a compact reference document
-- **model: "haiku"** — 배경지식 빌드는 검색+요약 위주라 빠른 모델로 충분
+- **model: "sonnet"** — 배경지식 빌드에 충분하면서 빠른 모델
 
 Each background document should be a cheat sheet (NOT a textbook chapter):
 - **What it is** (3-5 paragraphs): Clear explanation
