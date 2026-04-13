@@ -24,6 +24,8 @@ datasource db {
 model Paper {
   id            String      @id @default(uuid())
   title         String
+  authors       String?
+  publishedDate String?
   url           String?
   filePath      String
   chatSessionId String?
@@ -47,7 +49,9 @@ model Highlight {
 ### Paper 필드 설명
 
 - `id` (UUID) — 논문 고유 ID. 파일 시스템 디렉토리 이름으로도 사용
-- `title` — 논문 제목 (URL에서 추출하거나 파일명 기반)
+- `title` — 논문 제목. arXiv URL이면 arXiv API에서 자동 추출, 아니면 사용자 입력 또는 파일명 기반
+- `authors` — 저자 목록 (nullable). arXiv API에서 추출. 쉼표 구분 문자열
+- `publishedDate` — 발행일 (nullable). arXiv API에서 추출. `YYYY-MM-DD` 형식 문자열
 - `url` — arXiv 또는 다른 URL (nullable, 로컬 PDF의 경우)
 - `filePath` — 로컬 PDF 경로. 빈 문자열일 수 있음 (다운로드 실패 시)
 - `chatSessionId` — Claude Agent SDK 세션 ID. 첫 채팅 후 저장, 이후 resume에 사용 (nullable)

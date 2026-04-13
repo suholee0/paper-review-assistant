@@ -218,11 +218,37 @@ while (true) {
 
 단순히 `split("\n\n")`만 하면 깨집니다. 버퍼에 누적한 뒤 마지막 부분(완성되지 않았을 수 있음)은 버퍼로 되돌리는 패턴이 올바른 SSE 처리입니다.
 
+## 프리셋 질문 버튼
+
+채팅 내역이 비어있을 때 빠른 질문 버튼 표시:
+
+- **일반 프리셋**: "이 논문의 핵심을 요약해줘", "이 논문의 주요 contribution이 뭐야?"
+- **배경지식 프리셋**: `/api/papers/[id]/status`에서 `backgroundTopics`를 가져와 동적 생성. 클릭 시 `"<topic>에 대해 설명해줘"` 전송
+- **텍스트 선택 프리셋**: 텍스트 드래그 시 DragContext 아래에 "이 부분 설명해줘" 버튼 표시
+
+첫 메시지 전송 후 프리셋 버튼은 자동 숨김.
+
+## 분석 보강 (ExportButton)
+
+ChatPanel 헤더의 "분석 보강" 버튼. 채팅 내역이 있을 때만 활성화.
+
+**흐름**:
+1. 클릭 → 컨펌 다이얼로그 (메시지 수 표시)
+2. "보강하기" → `POST /api/papers/[id]/export` (SSE 스트리밍)
+3. AI가 기존 analysis.md + 채팅 기록을 읽고 문서 보강
+4. 진행 상황 오버레이 (tool activity 표시)
+5. 완료 시 하단 토스트 "분석 문서가 업데이트되었습니다"
+6. 사용자는 "분석" 탭에서 보강된 문서 확인
+
+## 메시지 영속화
+
+채팅 메시지를 `localStorage`에 `chat:<paperId>` 키로 저장. 마운트 시 복원. SSR hydration 불일치 방지를 위해 초기 상태는 빈 배열 → `useEffect`에서 복원.
+
 ## UI 렌더링
 
 ### 메시지 리스트 (MessageList.tsx)
 - **사용자 메시지**: plain text (`whitespace-pre-wrap`)
-- **AI 메시지**: `<ReactMarkdown>` + `remarkMath` + `rehypeKatex`로 마크다운과 수식 렌더링
+- **AI 메시지**: 공유 `MarkdownContent` 컴포넌트 (`remark-gfm` + `remark-math` + `rehype-katex`)로 렌더링
 - **스트리밍 중**: `streamingContent`를 동일한 `MarkdownContent` 컴포넌트로 렌더 (실시간)
 
 ### 로딩 상태
