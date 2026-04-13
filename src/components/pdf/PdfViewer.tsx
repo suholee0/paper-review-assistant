@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -53,50 +53,6 @@ function handlePdfLayerError(err: unknown): void {
   if (!isPdfAbortError(err)) {
     console.error("[pdf] Layer render error:", err);
   }
-}
-
-/**
- * Find the citation number (e.g. "1" from "[1]") associated with an
- * annotation-layer link that was clicked.  We try two strategies:
- *
- * 1. The link element's own textContent (some PDFs render text inside the <a>).
- * 2. Concatenating the textContent of all text-layer <span>s whose bounding
- *    rects overlap with the link's bounding rect.
- */
-function findCitationNumber(link: HTMLAnchorElement): string | null {
-  // Strategy 1 — link text
-  const linkText = link.textContent?.trim() || "";
-  const m1 = linkText.match(/\[?(\d+)\]?/);
-  if (m1) return m1[1];
-
-  // Strategy 2 — overlapping text-layer spans
-  const rect = link.getBoundingClientRect();
-  const pageWrapper = link.closest("[data-page]");
-  if (!pageWrapper) return null;
-
-  let combined = "";
-  const spans = pageWrapper.querySelectorAll(
-    ".react-pdf__Page__textContent span"
-  );
-  for (const span of spans) {
-    const sr = span.getBoundingClientRect();
-    if (
-      sr.right > rect.left &&
-      sr.left < rect.right &&
-      sr.bottom > rect.top &&
-      sr.top < rect.bottom
-    ) {
-      combined += span.textContent || "";
-    }
-  }
-
-  const m2 = combined.match(/\[(\d+)\]/);
-  if (m2) return m2[1];
-
-  const m3 = combined.trim().match(/^(\d+)$/);
-  if (m3) return m3[1];
-
-  return null;
 }
 
 interface PdfViewerProps {
@@ -216,39 +172,73 @@ export default function PdfViewer({
       .catch(() => {});
   }, [fileUrl]);
 
-  // Intercept clicks on annotation-layer internal links that correspond to
-  // citations ([N]).  Instead of scrolling to the references page we show a
-  // pinned panel with the reference info.
+  // Intercept citation link clicks at the document level (capture phase).
+  // This fires before pdfjs's own handlers, blocking page navigation and
+  // showing a reference panel instead.
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    function findCitationNum(link: HTMLElement): string | null {
+      const rect = link.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const pageEl = link.closest("[data-page]");
+      if (!pageEl) return null;
+
+      for (const span of pageEl.querySelectorAll(".textLayer span")) {
+        const sr = span.getBoundingClientRect();
+        if (sr.top > rect.bottom || sr.bottom < rect.top) continue;
+        if (cx < sr.left || cx > sr.right) continue;
+
+        const text = span.textContent || "";
+        // Match both [N] and numbers inside [N, M, ...] groups
+        const matches = [...text.matchAll(/(\d+)/g)].filter((m) => {
+          // Only match numbers that appear inside square brackets
+          const idx = m.index ?? 0;
+          const before = text.lastIndexOf("[", idx);
+          const after = text.indexOf("]", idx);
+          return before !== -1 && after !== -1 && before < idx && after > idx;
+        });
+
+        if (matches.length === 0) continue;
+        if (matches.length === 1) return matches[0][1];
+
+        // Multiple numbers in brackets — pick the one closest to link center
+        const ratio = (cx - sr.left) / sr.width;
+        const charPos = Math.round(ratio * text.length);
+        let best = matches[0];
+        let bestDist = Infinity;
+        for (const m of matches) {
+          const dist = Math.abs((m.index ?? 0) - charPos);
+          if (dist < bestDist) { bestDist = dist; best = m; }
+        }
+        return best[1];
+      }
+      return null;
+    }
 
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const link = target.closest(
-        ".annotationLayer a"
-      ) as HTMLAnchorElement | null;
+      const link = target.closest(".annotationLayer a") as HTMLAnchorElement | null;
       if (!link) return;
 
-      // Let external links through.
       const href = link.getAttribute("href") || "";
-      if (href.startsWith("http")) return;
+      if (href.startsWith("http") || href.startsWith("mailto")) return;
 
-      const citationNum = findCitationNumber(link);
-      if (!citationNum) return;
+      // Try to identify a citation number.  If this isn't a citation link
+      // (e.g. Figure, Equation, Section references), let pdfjs handle it.
+      const num = findCitationNum(link);
+      if (!num) return;
 
-      const ref = refsRef.current.find((r) => r.number === citationNum);
+      const ref = refsRef.current.find((r) => r.number === num);
       if (!ref) return;
 
+      // Only block navigation for citation links we can resolve.
       e.preventDefault();
-      e.stopPropagation();
+      e.stopImmediatePropagation();
 
       setPinnedCitation({ info: ref, x: e.clientX, y: e.clientY });
     };
 
-    // Capture phase so we fire before pdfjs's own link handler.
-    container.addEventListener("click", handler, true);
-    return () => container.removeEventListener("click", handler, true);
+    document.addEventListener("click", handler, true);
+    return () => document.removeEventListener("click", handler, true);
   }, []);
 
   const dismissPinnedCitation = useCallback(() => setPinnedCitation(null), []);
