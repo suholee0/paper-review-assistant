@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import PdfViewer from "@/components/pdf/PdfViewer";
 import ChatPanel from "@/components/chat/ChatPanel";
 import AnalysisStatus from "@/components/layout/AnalysisStatus";
@@ -64,7 +65,26 @@ export default function PaperView({ paper }: Props) {
   return (
     <div className="flex flex-col h-screen">
       <div className="flex items-center justify-between p-3 border-b bg-white shrink-0">
-        <h1 className="text-lg font-semibold truncate">{paper.title}</h1>
+        <div className="flex items-center gap-3 min-w-0">
+          <Link
+            href="/"
+            className="shrink-0 text-gray-400 hover:text-gray-700 transition-colors"
+            aria-label="Home"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+              <path fillRule="evenodd" d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 17 11h-1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6H3a1 1 0 0 1-.707-1.707l7-7Z" clipRule="evenodd" />
+            </svg>
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold truncate">{paper.title}</h1>
+            {paper.authors && (
+              <p className="text-xs text-gray-500 truncate">
+                {paper.authors}
+                {paper.publishedDate && ` · ${paper.publishedDate}`}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       <AnalysisStatus paperId={paper.id} />

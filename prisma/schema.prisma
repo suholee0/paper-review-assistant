@@ -10,6 +10,8 @@ datasource db {
 model Paper {
   id            String      @id @default(uuid())
   title         String
+  authors       String?
+  publishedDate String?
   url           String?
   filePath      String
   chatSessionId String?

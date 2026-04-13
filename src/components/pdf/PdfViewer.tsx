@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -55,6 +55,50 @@ function handlePdfLayerError(err: unknown): void {
   }
 }
 
+/**
+ * Find the citation number (e.g. "1" from "[1]") associated with an
+ * annotation-layer link that was clicked.  We try two strategies:
+ *
+ * 1. The link element's own textContent (some PDFs render text inside the <a>).
+ * 2. Concatenating the textContent of all text-layer <span>s whose bounding
+ *    rects overlap with the link's bounding rect.
+ */
+function findCitationNumber(link: HTMLAnchorElement): string | null {
+  // Strategy 1 — link text
+  const linkText = link.textContent?.trim() || "";
+  const m1 = linkText.match(/\[?(\d+)\]?/);
+  if (m1) return m1[1];
+
+  // Strategy 2 — overlapping text-layer spans
+  const rect = link.getBoundingClientRect();
+  const pageWrapper = link.closest("[data-page]");
+  if (!pageWrapper) return null;
+
+  let combined = "";
+  const spans = pageWrapper.querySelectorAll(
+    ".react-pdf__Page__textContent span"
+  );
+  for (const span of spans) {
+    const sr = span.getBoundingClientRect();
+    if (
+      sr.right > rect.left &&
+      sr.left < rect.right &&
+      sr.bottom > rect.top &&
+      sr.top < rect.bottom
+    ) {
+      combined += span.textContent || "";
+    }
+  }
+
+  const m2 = combined.match(/\[(\d+)\]/);
+  if (m2) return m2[1];
+
+  const m3 = combined.trim().match(/^(\d+)$/);
+  if (m3) return m3[1];
+
+  return null;
+}
+
 interface PdfViewerProps {
   fileUrl: string;
   onTextSelect?: (text: string, page: number) => void;
@@ -86,6 +130,15 @@ export default function PdfViewer({
   const [scaleInput, setScaleInput] = useState<number>(PDF_SCALE_INITIAL);
   const [scale, setScale] = useState<number>(PDF_SCALE_INITIAL);
   const [references, setReferences] = useState<ReferenceInfo[]>([]);
+  const [pinnedCitation, setPinnedCitation] = useState<{
+    info: ReferenceInfo;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Keep a ref so the capture-phase listener never goes stale.
+  const refsRef = useRef<ReferenceInfo[]>([]);
+  refsRef.current = references;
 
   // Debounce scale changes so rapid button clicks coalesce into a single render.
   useEffect(() => {
@@ -162,6 +215,43 @@ export default function PdfViewer({
       })
       .catch(() => {});
   }, [fileUrl]);
+
+  // Intercept clicks on annotation-layer internal links that correspond to
+  // citations ([N]).  Instead of scrolling to the references page we show a
+  // pinned panel with the reference info.
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest(
+        ".annotationLayer a"
+      ) as HTMLAnchorElement | null;
+      if (!link) return;
+
+      // Let external links through.
+      const href = link.getAttribute("href") || "";
+      if (href.startsWith("http")) return;
+
+      const citationNum = findCitationNumber(link);
+      if (!citationNum) return;
+
+      const ref = refsRef.current.find((r) => r.number === citationNum);
+      if (!ref) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      setPinnedCitation({ info: ref, x: e.clientX, y: e.clientY });
+    };
+
+    // Capture phase so we fire before pdfjs's own link handler.
+    container.addEventListener("click", handler, true);
+    return () => container.removeEventListener("click", handler, true);
+  }, []);
+
+  const dismissPinnedCitation = useCallback(() => setPinnedCitation(null), []);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -265,7 +355,11 @@ export default function PdfViewer({
         </Document>
       </div>
 
-      <CitationPopover references={references} />
+      <CitationPopover
+        references={references}
+        pinnedCitation={pinnedCitation}
+        onDismiss={dismissPinnedCitation}
+      />
     </div>
   );
 }

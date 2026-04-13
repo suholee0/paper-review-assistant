@@ -1,6 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { savePdf, createPaperDir } from "@/lib/papers";
+import { savePdf, createPaperDir, paperHasAnalysis } from "@/lib/papers";
+
+/** Extract arXiv paper ID from a URL (abs or pdf). */
+function extractArxivId(url: string): string | null {
+  const m = url.match(/arxiv\.org\/(?:abs|pdf)\/([^?#/]+)/);
+  return m ? m[1] : null;
+}
+
+/** Fetch title, authors, published date from the arXiv Atom API. */
+async function fetchArxivMeta(
+  arxivId: string
+): Promise<{ title: string; authors: string; publishedDate: string } | null> {
+  try {
+    const res = await fetch(
+      `https://export.arxiv.org/api/query?id_list=${arxivId}`
+    );
+    if (!res.ok) return null;
+    const xml = await res.text();
+
+    const titleMatch = xml.match(/<entry>[\s\S]*?<title>([\s\S]*?)<\/title>/);
+    const title = titleMatch
+      ? titleMatch[1].replace(/\s+/g, " ").trim()
+      : null;
+
+    const authorMatches = [...xml.matchAll(/<author>\s*<name>([^<]+)<\/name>/g)];
+    const authors = authorMatches.map((m) => m[1].trim()).join(", ");
+
+    const pubMatch = xml.match(/<published>(\d{4}-\d{2}-\d{2})/);
+    const publishedDate = pubMatch ? pubMatch[1] : "";
+
+    if (!title) return null;
+    return { title, authors, publishedDate };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Try to derive a PDF download URL from a paper URL.
@@ -88,9 +123,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Fetch metadata from arXiv if applicable.
+  let paperTitle = title || "Untitled";
+  let authors: string | null = null;
+  let publishedDate: string | null = null;
+
+  if (url) {
+    const arxivId = extractArxivId(url);
+    if (arxivId) {
+      const meta = await fetchArxivMeta(arxivId);
+      if (meta) {
+        paperTitle = meta.title;
+        authors = meta.authors;
+        publishedDate = meta.publishedDate;
+      }
+    }
+  }
+
   const paper = await prisma.paper.create({
     data: {
-      title: title || "Untitled",
+      title: paperTitle,
+      authors,
+      publishedDate,
       url: url || null,
       filePath: "",
     },
@@ -118,5 +172,11 @@ export async function GET() {
   const papers = await prisma.paper.findMany({
     orderBy: { createdAt: "desc" },
   });
-  return NextResponse.json(papers);
+
+  const withStatus = papers.map((p) => ({
+    ...p,
+    hasAnalysis: paperHasAnalysis(p.id),
+  }));
+
+  return NextResponse.json(withStatus);
 }

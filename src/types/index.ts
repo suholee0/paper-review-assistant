@@ -6,6 +6,8 @@ export type { HighlightColor } from "@/constants/highlight";
 export interface PaperMeta {
   id: string;
   title: string;
+  authors: string | null;
+  publishedDate: string | null;
   url: string | null;
   filePath: string;
   chatSessionId: string | null;

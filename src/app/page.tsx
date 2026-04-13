@@ -1,13 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+interface PaperItem {
+  id: string;
+  title: string;
+  authors: string | null;
+  publishedDate: string | null;
+  url: string | null;
+  createdAt: string;
+  hasAnalysis: boolean;
+}
 
 export default function Home() {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
+  const [papers, setPapers] = useState<PaperItem[]>([]);
+
+  useEffect(() => {
+    fetch("/api/papers")
+      .then((r) => r.json())
+      .then(setPapers)
+      .catch(() => {});
+  }, []);
 
   async function handleUrlSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,8 +83,8 @@ export default function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 gap-8">
-      <h1 className="text-3xl font-bold">Paper Review Tool</h1>
+    <main className="flex min-h-screen flex-col items-center p-8 gap-8">
+      <h1 className="text-3xl font-bold mt-12">Paper Review Tool</h1>
 
       <form onSubmit={handleUrlSubmit} className="flex flex-col gap-3 w-full max-w-md">
         <input
@@ -105,6 +124,41 @@ export default function Home() {
       </label>
 
       {loading && <p className="text-gray-500">Opening paper...</p>}
+
+      {papers.length > 0 && (
+        <section className="w-full max-w-2xl mt-4">
+          <h2 className="text-lg font-semibold mb-3 text-gray-700">My Papers</h2>
+          <ul className="divide-y border rounded-lg bg-white">
+            {papers.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/paper/${p.id}`}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      {p.title}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5 truncate">
+                      {[
+                        p.authors?.split(",")[0]?.trim(),
+                        p.publishedDate,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || new Date(p.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  {p.hasAnalysis && (
+                    <span className="ml-3 shrink-0 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                      analyzed
+                    </span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   );
 }
