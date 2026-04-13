@@ -14,7 +14,7 @@
     "paper:list": "tsx scripts/list-papers.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.97",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.104",
     "@prisma/client": "^6.6.0",
     "katex": "^0.16.45",
     "next": "^15.3.0",

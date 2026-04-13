@@ -6,11 +6,18 @@ import { sseEncode } from "@/lib/sse";
 import fs from "fs";
 import path from "path";
 
+const EXPORT_ALLOWED_TOOLS = ["Read", "Write", "Glob", "Grep"];
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!UUID_RE.test(id)) {
+    return new Response(JSON.stringify({ error: "invalid id" }), { status: 400 });
+  }
   const body = await request.json();
   const { messages } = body as {
     messages: { role: string; content: string; context?: string }[];
@@ -81,6 +88,7 @@ ${chatLog}
         for await (const chunk of provider.query({
           prompt,
           cwd: paperDir,
+          allowedTools: EXPORT_ALLOWED_TOOLS,
         })) {
           if (chunk.type === "text") {
             controller.enqueue(

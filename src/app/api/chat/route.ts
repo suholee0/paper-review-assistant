@@ -3,7 +3,9 @@ import { prisma } from "@/lib/db";
 import { getAIProvider } from "@/lib/ai/provider";
 import { getPaperDir } from "@/lib/papers";
 import { sseEncode } from "@/lib/sse";
-import { DEFAULT_CHAT_MODEL } from "@/constants/models";
+import { AVAILABLE_MODELS, DEFAULT_CHAT_MODEL } from "@/constants/models";
+
+const CHAT_ALLOWED_TOOLS = ["Read", "Glob", "Grep", "WebSearch", "WebFetch"];
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -16,7 +18,8 @@ export async function POST(request: NextRequest) {
     return new Response(JSON.stringify({ error: "message is required" }), { status: 400 });
   }
 
-  const chatModel = typeof model === "string" && model ? model : DEFAULT_CHAT_MODEL;
+  const validModelIds = AVAILABLE_MODELS.map((m) => m.id) as string[];
+  const chatModel = validModelIds.includes(model) ? model : DEFAULT_CHAT_MODEL;
   const paper = await prisma.paper.findUnique({ where: { id: paperId } });
 
   if (!paper) {
@@ -52,6 +55,7 @@ export async function POST(request: NextRequest) {
           sessionId: paper.chatSessionId || undefined,
           cwd: paperDir,
           model: chatModel,
+          allowedTools: CHAT_ALLOWED_TOOLS,
         })) {
           if (chunk.type === "text") {
             controller.enqueue(encoder.encode(sseEncode({ type: "text", content: chunk.content })));
