@@ -46,5 +46,9 @@ next-env.d.ts
 /papers/
 /data/
 
-# superpowers workflow artifacts (specs and plans are personal workflow)
+# superpowers workflow artifacts
 /docs/superpowers/
+/.superpowers/
+
+# claude code local settings
+/.claude/
