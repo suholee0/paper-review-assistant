@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import DragContext from "./DragContext";
+import ExportButton from "./ExportButton";
 import type { ChatMessage } from "@/types";
 import { AVAILABLE_MODELS, DEFAULT_CHAT_MODEL, type ChatModelId } from "@/constants/models";
 
@@ -15,6 +16,23 @@ interface Props {
 
 export default function ChatPanel({ paperId, selectedText, onClearSelection }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Restore messages from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`chat:${paperId}`);
+      if (saved) setMessages(JSON.parse(saved));
+    } catch {
+      // ignore
+    }
+  }, [paperId]);
+
+  // Persist messages to localStorage
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(`chat:${paperId}`, JSON.stringify(messages));
+    }
+  }, [messages, paperId]);
   const [streamingContent, setStreamingContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [toolActivity, setToolActivity] = useState<string | null>(null);
@@ -115,6 +133,8 @@ export default function ChatPanel({ paperId, selectedText, onClearSelection }: P
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-3 border-b">
         <span className="font-medium text-sm">Chat</span>
+        <div className="flex items-center gap-2">
+        <ExportButton paperId={paperId} messages={messages} />
         <select
           value={model}
           onChange={(e) => setModel(e.target.value as ChatModelId)}
@@ -125,6 +145,7 @@ export default function ChatPanel({ paperId, selectedText, onClearSelection }: P
             <option key={m.id} value={m.id}>{m.label}</option>
           ))}
         </select>
+        </div>
       </div>
       <MessageList
         messages={messages}

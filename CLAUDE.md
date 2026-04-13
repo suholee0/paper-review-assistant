@@ -67,6 +67,33 @@ papers/<paper-id>/
   analysis.md           # 깊은 읽기 결과
 ```
 
+## 마크다운 문서 작성 규칙
+
+배경지식(`background/*.md`)과 분석(`analysis.md`) 문서는 웹 UI에서 react-markdown + remark-gfm + KaTeX로 렌더링된다. 다음 규칙을 반드시 지킨다:
+
+### 테이블 안 LaTeX 수식
+
+마크다운 테이블의 `|` 구분자와 LaTeX 기호가 충돌한다. 테이블 셀 안에서:
+
+- **norm**: `\|` 사용 금지 → `\lVert ... \rVert` 사용
+- **대괄호**: `\left[`, `\right]` 사용 금지 → `\bigl[`, `\bigr]` 사용
+- **조건부 표기**: `x|y` 사용 금지 → `x \mid y` 사용
+- **집합 표기**: `\{`, `\}` 는 문제없음
+
+```markdown
+# BAD — 테이블 파싱 깨짐
+| Loss | $\mathbb{E}\left\[\|f(x)\|^2\right\]$ |
+
+# GOOD
+| Loss | $\mathbb{E}\bigl[\lVert f(x)\rVert^2\bigr]$ |
+```
+
+### 일반 규칙
+
+- 한국어로 작성
+- 수식은 inline `$...$` 또는 display `$$...$$` 사용
+- 코드 블록에 언어 태그 명시 (```python, ```bash 등)
+
 ## Tech Stack
 
 - Next.js 15 (App Router) + TypeScript

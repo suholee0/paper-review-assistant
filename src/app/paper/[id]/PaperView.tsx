@@ -7,19 +7,35 @@ import ChatPanel from "@/components/chat/ChatPanel";
 import AnalysisStatus from "@/components/layout/AnalysisStatus";
 import ResizableLayout from "@/components/layout/ResizableLayout";
 import HighlightList from "@/components/highlights/HighlightList";
+import DocViewer from "@/components/docs/DocViewer";
 import type { PaperMeta, HighlightData, HighlightRect, HighlightColor } from "@/types";
 
 interface Props {
   paper: PaperMeta;
 }
 
+type TabId = "pdf" | "analysis" | string; // string for "bg:<topic>"
+
 export default function PaperView({ paper }: Props) {
   const [selectedText, setSelectedText] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<HighlightData[]>([]);
   const [goToPage, setGoToPage] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>("pdf");
+  const [bgTopics, setBgTopics] = useState<string[]>([]);
+  const [hasAnalysis, setHasAnalysis] = useState(false);
 
   const fileUrl = paper.filePath ? `/api/papers/${paper.id}/pdf` : "";
   const clearSelection = useCallback(() => setSelectedText(null), []);
+
+  useEffect(() => {
+    fetch(`/api/papers/${paper.id}/status`)
+      .then((r) => r.json())
+      .then((s: { analyzed: boolean; backgroundTopics: string[] }) => {
+        setHasAnalysis(s.analyzed);
+        setBgTopics(s.backgroundTopics);
+      })
+      .catch(() => {});
+  }, [paper.id]);
 
   useEffect(() => {
     fetch(`/api/highlights?paperId=${paper.id}`)
@@ -62,8 +78,53 @@ export default function PaperView({ paper }: Props) {
     );
   }
 
+  function renderLeftPanel() {
+    if (activeTab === "pdf") {
+      return fileUrl ? (
+        <PdfViewer
+          fileUrl={fileUrl}
+          onTextSelect={(text) => setSelectedText(text)}
+          highlights={highlights}
+          goToPage={goToPage}
+          onAddHighlight={handleAddHighlight}
+          onDeleteHighlight={handleDeleteHighlight}
+          onUpdateMemo={handleUpdateMemo}
+          onAskAI={(text) => setSelectedText(text)}
+        />
+      ) : (
+        <div className="flex items-center justify-center h-full text-gray-500">
+          No PDF available.
+        </div>
+      );
+    }
+
+    if (activeTab === "analysis") {
+      return <DocViewer paperId={paper.id} docPath="analysis.md" />;
+    }
+
+    if (activeTab.startsWith("bg:")) {
+      const topic = activeTab.slice(3);
+      return <DocViewer paperId={paper.id} docPath={`background/${topic}.md`} />;
+    }
+
+    return null;
+  }
+
+  const tabClass = (id: TabId) => {
+    const isActive = activeTab === id;
+    const isBg = id.startsWith("bg:");
+    const base = "px-3 py-1 text-xs font-medium rounded-full transition-colors whitespace-nowrap";
+    if (isActive) {
+      if (id === "pdf") return `${base} bg-gray-800 text-white`;
+      if (id === "analysis") return `${base} bg-blue-600 text-white`;
+      if (isBg) return `${base} bg-green-600 text-white`;
+    }
+    return `${base} text-gray-500 hover:bg-gray-200`;
+  };
+
   return (
     <div className="flex flex-col h-screen">
+      {/* Header */}
       <div className="flex items-center justify-between p-3 border-b bg-white shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <Link
@@ -87,27 +148,40 @@ export default function PaperView({ paper }: Props) {
         </div>
       </div>
 
-      <AnalysisStatus paperId={paper.id} />
+      {/* Tabs */}
+      <div className="flex items-center gap-0.5 px-3 py-1 bg-gray-50 border-b border-gray-200 overflow-x-auto shrink-0">
+        <button className={tabClass("pdf")} onClick={() => setActiveTab("pdf")}>
+          PDF
+        </button>
+
+        {hasAnalysis && (
+          <>
+            <div className="w-px h-4 bg-gray-300 mx-1.5 shrink-0" />
+            <button className={tabClass("analysis")} onClick={() => setActiveTab("analysis")}>
+              분석
+            </button>
+          </>
+        )}
+
+        {bgTopics.length > 0 && (
+          <>
+            <div className="w-px h-4 bg-gray-300 mx-1.5 shrink-0" />
+            <span className="text-[10px] text-gray-400 mr-1 shrink-0">배경지식</span>
+            {bgTopics.map((topic) => (
+              <button
+                key={topic}
+                className={tabClass(`bg:${topic}`)}
+                onClick={() => setActiveTab(`bg:${topic}`)}
+              >
+                {topic.replace(/-/g, " ")}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
 
       <ResizableLayout
-        left={
-          fileUrl ? (
-            <PdfViewer
-              fileUrl={fileUrl}
-              onTextSelect={(text) => setSelectedText(text)}
-              highlights={highlights}
-              goToPage={goToPage}
-              onAddHighlight={handleAddHighlight}
-              onDeleteHighlight={handleDeleteHighlight}
-              onUpdateMemo={handleUpdateMemo}
-              onAskAI={(text) => setSelectedText(text)}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              No PDF available. Analysis will use the paper URL.
-            </div>
-          )
-        }
+        left={renderLeftPanel()}
         right={
           <ChatPanel
             paperId={paper.id}
@@ -117,10 +191,12 @@ export default function PaperView({ paper }: Props) {
         }
       />
 
-      <HighlightList
-        highlights={highlights}
-        onNavigate={(page) => setGoToPage(page)}
-      />
+      {activeTab === "pdf" && (
+        <HighlightList
+          highlights={highlights}
+          onNavigate={(page) => setGoToPage(page)}
+        />
+      )}
     </div>
   );
 }
