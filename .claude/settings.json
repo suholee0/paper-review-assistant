@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch",
+      "Write",
+      "Edit",
+      "Bash(npm install)",
+      "Bash(npm run *)",
+      "Bash(npm test)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsx *)",
+      "Bash(npx tsc *)",
+      "Bash(npx vitest *)",
+      "Bash(npx next *)",
+      "Bash(node *)",
+      "Bash(git *)",
+      "Bash(open *)",
+      "Bash(xdg-open *)",
+      "Bash(start *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(kill *)",
+      "Bash(curl *)",
+      "Bash(lsof *)"
+    ]
+  }
+}

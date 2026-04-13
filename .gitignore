@@ -50,5 +50,6 @@ next-env.d.ts
 /docs/superpowers/
 /.superpowers/
 
-# claude code local settings
-/.claude/
+# claude code — track shared settings, ignore local/personal
+/.claude/*
+!/.claude/settings.json

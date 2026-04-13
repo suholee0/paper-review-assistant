@@ -2,6 +2,16 @@
 
 논문을 깊게 이해하기 위한 AI 도구. 이 프로젝트에서 Claude Code가 메인 에이전트 역할을 한다.
 
+## 첫 실행 자동 설정
+
+사용자가 논문을 같이 읽자고 요청했는데 `node_modules/` 디렉토리가 없으면, 먼저 setup을 실행한다:
+
+```bash
+bash scripts/setup.sh
+```
+
+이 스크립트가 `npm install` + `npx prisma db push`를 한번에 처리한다. setup 완료 후 요청된 작업을 이어서 수행한다.
+
 ## Available CLI Tools
 
 Claude Code에서 직접 호출 가능한 스크립트들:
