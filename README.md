@@ -1,5 +1,7 @@
 # Paper Review Tool
 
+> **Claude Code 권한 안내**: 이 프로젝트는 `.claude/settings.json`에 Claude Code 도구 권한이 미리 설정되어 있습니다. `Read`, `Write`, `Edit`, `Glob`, `Grep`, `WebSearch`, `WebFetch`와 제한된 `Bash` 명령(`npm`, `npx`, `git`, `node` 등)이 허용됩니다. clone 후 사용 전에 [.claude/settings.json](./.claude/settings.json)을 직접 확인하시기 바랍니다.
+
 논문을 읽을 때 AI 메이트와 함께 깊게 이해할 수 있는 로컬 도구.
 
 Claude Code가 논문을 먼저 **스키밍 → 배경지식 수집 → 깊은 읽기** 과정을 거쳐 분석한 뒤,
