@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import DragContext from "./DragContext";
@@ -19,6 +19,14 @@ export default function ChatPanel({ paperId, selectedText, onClearSelection }: P
   const [isLoading, setIsLoading] = useState(false);
   const [toolActivity, setToolActivity] = useState<string | null>(null);
   const [model, setModel] = useState<ChatModelId>(DEFAULT_CHAT_MODEL);
+  const [bgTopics, setBgTopics] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/papers/${paperId}/status`)
+      .then((r) => r.json())
+      .then((s: { backgroundTopics?: string[] }) => setBgTopics(s.backgroundTopics || []))
+      .catch(() => {});
+  }, [paperId]);
 
   const handleSend = useCallback(
     async (message: string) => {
@@ -124,9 +132,59 @@ export default function ChatPanel({ paperId, selectedText, onClearSelection }: P
         isLoading={isLoading}
         toolActivity={toolActivity}
       />
-      {selectedText && (
-        <DragContext text={selectedText} onClear={onClearSelection} />
+
+      {/* Preset buttons — show when chat is empty and no text selected */}
+      {!isLoading && messages.length === 0 && !selectedText && (
+        <div className="px-3 pb-3 space-y-2">
+          <div className="flex flex-wrap gap-2">
+            {[
+              "이 논문의 핵심을 요약해줘",
+              "이 논문의 주요 contribution이 뭐야?",
+            ].map((q) => (
+              <button
+                key={q}
+                onClick={() => handleSend(q)}
+                className="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-300 transition-colors"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+          {bgTopics.length > 0 && (
+            <div>
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider">배경지식</span>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {bgTopics.map((topic) => (
+                  <button
+                    key={topic}
+                    onClick={() => handleSend(`${topic.replace(/-/g, " ")}에 대해 설명해줘`)}
+                    className="text-xs px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
+                  >
+                    {topic.replace(/-/g, " ")}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
+
+      {selectedText && (
+        <>
+          <DragContext text={selectedText} onClear={onClearSelection} />
+          <div className="flex gap-2 px-3 pb-2">
+            <button
+              onClick={() => handleSend("이 부분 설명해줘")}
+              disabled={isLoading}
+              className="text-xs px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
+            >
+              이 부분 설명해줘
+            </button>
+          </div>
+        </>
+      )}
+      {!selectedText && messages.length > 0 && null}
+
       <MessageInput onSend={handleSend} disabled={isLoading} />
     </div>
   );
