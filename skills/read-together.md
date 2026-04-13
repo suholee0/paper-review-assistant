@@ -23,15 +23,21 @@ Working directory: {{paperDir}}
 
 ### Phase 2: Build background knowledge
 
-For EACH topic in topics.json:
-1. Research the topic using web search — find authoritative sources
-2. Write a compact reference document to `{{paperDir}}/background/<topic-name>.md`
+**IMPORTANT: 모든 토픽을 병렬로 처리한다.** Agent tool을 사용하여 각 토픽을 별도 서브에이전트에게 동시에 위임한다. 하나의 메시지에서 여러 Agent tool call을 동시에 보내면 병렬 실행된다.
+
+For EACH topic in topics.json, dispatch a subagent with:
+- Topic name and description
+- Paper source (URL or file path) for context
+- Output path: `{{paperDir}}/background/<topic-name>.md`
+- Instructions to research via web search and write a compact reference document
 
 Each background document should be a cheat sheet (NOT a textbook chapter):
 - **What it is** (3-5 paragraphs): Clear explanation
 - **Why it exists**: What problem it solves
 - **Key formulas/concepts**: Core ideas (if applicable)
 - **Relevance to the paper**: How it connects to the target paper
+
+Wait for all subagents to complete before proceeding to Phase 3.
 
 ### Phase 3: Deep reading
 
