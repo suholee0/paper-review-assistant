@@ -8,6 +8,7 @@ import AnalysisStatus from "@/components/layout/AnalysisStatus";
 import ResizableLayout from "@/components/layout/ResizableLayout";
 import HighlightList from "@/components/highlights/HighlightList";
 import DocViewer from "@/components/docs/DocViewer";
+import PaperOnboarding from "@/components/onboarding/PaperOnboarding";
 import type { PaperMeta, HighlightData, HighlightRect, HighlightColor } from "@/types";
 
 interface Props {
@@ -149,7 +150,7 @@ export default function PaperView({ paper }: Props) {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-0.5 px-3 py-1 bg-gray-50 border-b border-gray-200 overflow-x-auto shrink-0">
+      <div data-onboarding="tabs" className="flex items-center gap-0.5 px-3 py-1 bg-gray-50 border-b border-gray-200 overflow-x-auto shrink-0">
         <button className={tabClass("pdf")} onClick={() => setActiveTab("pdf")}>
           PDF
         </button>
@@ -197,6 +198,8 @@ export default function PaperView({ paper }: Props) {
           onNavigate={(page) => setGoToPage(page)}
         />
       )}
+
+      <PaperOnboarding />
     </div>
   );
 }

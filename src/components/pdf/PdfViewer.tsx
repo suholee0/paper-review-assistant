@@ -311,6 +311,8 @@ export default function PdfViewer({
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-auto bg-gray-200 p-4"
+        data-onboarding="text-select"
+        data-onboarding-citation="citation"
         onMouseUp={handleMouseUp}
       >
         <Document file={fileUrl} onLoadSuccess={onDocumentLoadSuccess}>

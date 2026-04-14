@@ -25,7 +25,7 @@ export default function MessageInput({ onSend, disabled }: Props) {
   }
 
   return (
-    <div className="p-3 border-t">
+    <div className="p-3 border-t" data-onboarding="chat-input">
       <div className="flex gap-2">
         <textarea
           value={input}

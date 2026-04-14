@@ -134,7 +134,7 @@ export default function ChatPanel({ paperId, selectedText, onClearSelection }: P
       <div className="flex items-center justify-between p-3 border-b">
         <span className="font-medium text-sm">Chat</span>
         <div className="flex items-center gap-2">
-        <ExportButton paperId={paperId} messages={messages} />
+        <span data-onboarding="export"><ExportButton paperId={paperId} messages={messages} /></span>
         <select
           value={model}
           onChange={(e) => setModel(e.target.value as ChatModelId)}
@@ -156,7 +156,7 @@ export default function ChatPanel({ paperId, selectedText, onClearSelection }: P
 
       {/* Preset buttons — show when chat is empty and no text selected */}
       {!isLoading && messages.length === 0 && !selectedText && (
-        <div className="px-3 pb-3 space-y-2">
+        <div data-onboarding="presets" className="px-3 pb-3 space-y-2">
           <div className="flex flex-wrap gap-2">
             {[
               "이 논문의 핵심을 요약해줘",
