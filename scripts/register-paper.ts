@@ -42,6 +42,27 @@ async function main() {
 
   const title = titleArg || (isFile ? path.basename(input, ".pdf") : input.split("/").pop() || "Untitled");
 
+  // Deduplicate: if same URL already registered, return existing paper
+  if (isUrl) {
+    // Normalize arXiv URLs to canonical abs form for dedup
+    const arxivId = input.match(/arxiv\.org\/(?:abs|pdf)\/(.+?)(?:\.pdf)?(?:\?|$)/)?.[1];
+    const existing = arxivId
+      ? await prisma.paper.findFirst({
+          where: { OR: [
+            { url: { contains: arxivId } },
+          ]},
+        })
+      : await prisma.paper.findFirst({ where: { url: input } });
+
+    if (existing) {
+      await prisma.$disconnect();
+      const paperDir = path.join(process.cwd(), "papers", existing.id);
+      const pdfPath = existing.filePath || path.join(paperDir, "original.pdf");
+      console.log(JSON.stringify({ id: existing.id, title: existing.title, paperDir, pdfPath, deduplicated: true }));
+      return;
+    }
+  }
+
   // Create DB entry
   const paper = await prisma.paper.create({
     data: { title, url: isUrl ? input : null, filePath: "" },
