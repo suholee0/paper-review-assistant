@@ -50,6 +50,5 @@ next-env.d.ts
 /docs/superpowers/
 /.superpowers/
 
-# claude code — track shared settings, ignore local/personal
-/.claude/*
-!/.claude/settings.json
+# Legacy local agent settings (never commit personal configuration)
+/.claude/

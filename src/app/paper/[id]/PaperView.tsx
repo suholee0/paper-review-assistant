@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import PdfViewer from "@/components/pdf/PdfViewer";
 import ChatPanel from "@/components/chat/ChatPanel";
-import AnalysisStatus from "@/components/layout/AnalysisStatus";
 import ResizableLayout from "@/components/layout/ResizableLayout";
 import HighlightList from "@/components/highlights/HighlightList";
 import DocViewer from "@/components/docs/DocViewer";

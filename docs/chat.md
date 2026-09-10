@@ -2,7 +2,7 @@
 
 ## 개요
 
-AI와 논문에 대해 실시간으로 대화하는 기능. Claude Agent SDK를 사용하며, SSE로 응답을 스트리밍합니다.
+AI와 논문에 대해 실시간으로 대화하는 기능. Codex SDK를 사용하며, SSE로 응답을 스트리밍합니다.
 
 ## 데이터 흐름
 
@@ -13,9 +13,9 @@ ChatPanel.handleSend()
   ↓
 POST /api/chat (JSON)
   ↓
-route.ts: paper 조회 → prompt 구성 → ClaudeAgentProvider.query()
+route.ts: paper 조회 → prompt 구성 → CodexProvider.query()
   ↓
-Claude Agent SDK: 모델 호출 (+tool-use 라운드트립)
+Codex SDK: 모델 호출 (+tool-use 라운드트립)
   ↓
 스트림 이벤트를 AIResponse로 정규화
   ↓
@@ -37,30 +37,28 @@ Content-Type: application/json
   paperId: string,
   message: string,
   context?: string,  // 드래그한 텍스트 (Ask AI)
-  model?: "claude-sonnet-4-6" | "claude-opus-4-6"
+  model?: "default"  // CODEX_MODEL 또는 서버의 Codex 설정
 }
 ```
 
 ### 응답: SSE 스트림
 ```
-data: {"type":"tool_use","name":"Read","summary":"📖 analysis.md 읽는 중"}
+data: {"type":"tool_use","name":"command_execution","summary":"명령 실행: cat analysis.md"}
 
-data: {"type":"text","content":"Based on the paper"}
+data: {"type":"text","content":"Based on the paper, the authors propose..."}
 
-data: {"type":"text","content":", the authors propose..."}
-
-data: {"type":"done","sessionId":"abc-123"}
+data: {"type":"done","sessionId":"codex:<UUID>"}
 ```
 
 ### 이벤트 종류
-- `text` — 텍스트 델타 (실시간 스트리밍)
+- `text` — SDK의 완료된 메시지. 토큰 delta가 아닌 메시지 단위 스트리밍
 - `tool_use` — AI가 tool을 호출 중임을 알림
 - `done` — 응답 완료, 세션 ID 포함
 - `error` — 에러 발생
 
 ## 프롬프트 구성
 
-### 첫 메시지 (세션 없음)
+### 첫 메시지 (Codex 세션 없음)
 ```
 You are a knowledgeable research assistant helping a user understand a paper.
 
@@ -71,10 +69,10 @@ Read the background/ directory and analysis.md if they exist to understand the p
 User question: <message>
 ```
 
-Claude Agent SDK가 이 지시를 받으면 `Read`, `Glob` tool을 사용해서 배경지식 파일을 읽은 뒤 답변합니다. 이 과정은 여러 차례의 tool-use 라운드트립을 포함할 수 있습니다.
+Codex SDK가 이 지시를 받으면 read-only sandbox에서 배경지식 파일을 읽은 뒤 답변합니다. 이 과정은 여러 차례의 tool-use 라운드트립을 포함할 수 있습니다.
 
 ### 이후 메시지 (세션 resume)
-SDK의 `resume` 옵션에 `chatSessionId`를 전달하면 이전 대화 맥락과 이미 읽은 파일 내용이 유지됩니다. 프롬프트에는 새 질문만 추가:
+DB의 `codex:<UUID>`에서 UUID를 추출하여 SDK의 `resumeThread()`에 전달하면 이전 대화 맥락과 이미 읽은 파일 내용이 유지됩니다. 프롬프트에는 새 질문만 추가:
 
 ```
 User question: <message>
@@ -89,53 +87,23 @@ The user selected this text from the paper:
 User question: <message>
 ```
 
-## Claude Agent SDK 통합
+## Codex SDK 통합
 
-`src/lib/ai/claude-agent.ts`가 SDK를 래핑합니다.
+`src/lib/ai/codex.ts`가 공식 SDK를 AIProvider 계약으로 변환합니다. 인증·설정·취소 처리는 [ai-integration.md](ai-integration.md)를 참고하세요.
 
-### 기본 옵션
-```typescript
-const sdkOptions = {
-  cwd: paperDir,
-  allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebSearch", "WebFetch"],
-  model: "claude-sonnet-4-6",  // 또는 Opus
-  resume: chatSessionId,       // 세션 이어가기
-};
-```
+- 채팅: 논문 디렉토리에서 `read-only`, 웹 검색 `live`
+- 분석 보강: 논문 디렉토리에서 `workspace-write`, 웹 검색 `disabled`
+- 공통: `approvalPolicy: never`, shell 네트워크 접근 비활성화
 
 ### 메시지 스트림 처리
-SDK의 `query()`는 async generator로 메시지를 반환합니다. 종류:
 
-1. **`assistant` 메시지** — 모델의 응답 (텍스트 + tool_use 블록 포함)
-   - `tool_use` 블록 감지 시 → `summarizeToolUse()`로 사용자 친화 메시지 생성 → yield
-2. **`stream_event`** — 실시간 text delta
-   - `content_block_delta` + `text_delta` 타입만 추출 → yield
-3. **`result`** — 최종 결과
-   - 성공: sessionId yield
-   - 실패: error yield
-
-### Tool-Use 요약
-
-`summarizeToolUse(name, input)` 함수가 tool 호출을 한국어 메시지로 변환:
-
-```typescript
-switch (name) {
-  case "Read":       return `📖 ${basename} 읽는 중`;
-  case "Glob":       return `🔍 파일 검색 중: ${pattern}`;
-  case "Grep":       return `🔍 내용 검색 중: ${pattern}`;
-  case "WebSearch":  return `🌐 웹 검색 중: ${query}`;
-  case "WebFetch":   return `🌐 페이지 가져오는 중: ${url}`;
-  case "Bash":       return `⚙️ 명령 실행 중: ${command}`;
-  default:           return `🔧 ${name} 실행 중`;
-}
-```
-
-이 메시지는 채팅 UI에서 "AI가 지금 뭘 하고 있는지" 보여주는 데 사용됩니다.
+1. `item.completed`의 `agent_message`는 ID별 한 번만 `text`로 전달합니다. `item.updated` snapshot을 텍스트 delta로 취급하지 않습니다.
+2. 명령 실행·검색·파일 변경·MCP 도구 이벤트는 한국어 `tool_use` 상태로 전달합니다.
+3. `turn.completed` 및 정상 스트림 종료 후 `done`을 전달합니다. 실패·인증 오류·중단은 `error`이며 성공으로 표시하지 않습니다.
 
 ### 세션 관리
-첫 메시지 처리 후 SDK가 반환한 `session_id`를 `Paper.chatSessionId`로 DB에 저장. 두 번째 메시지부터는 이 세션을 resume해서:
-- 이전 대화 맥락 유지
-- 이미 읽은 파일을 다시 읽지 않음 (속도 개선)
+
+성공한 응답의 thread ID를 `codex:<UUID>` 형태로 `Paper.chatSessionId`에 저장하고 이후 요청에서 재개합니다. 이전 runtime ID는 Codex 세션으로 전달하지 않으며 새 대화를 시작합니다. 기존 브라우저 메시지는 유지하지만 이전 runtime의 대화 맥락은 자동 이관하지 않습니다.
 
 ## SSE 스트리밍 상세
 
@@ -181,6 +149,8 @@ export function sseEncode(data: unknown): string {
 const reader = response.body?.getReader();
 const decoder = new TextDecoder();
 let buffer = "";
+let streamError = "";
+let completed = false;
 
 while (true) {
   const { done, value } = await reader.read();
@@ -202,6 +172,10 @@ while (true) {
           setToolActivity(null);  // 텍스트 시작되면 tool 메시지 클리어
         } else if (data.type === "tool_use") {
           setToolActivity(data.summary);
+        } else if (data.type === "error") {
+          streamError = data.message;
+        } else if (data.type === "done") {
+          completed = true;
         }
       } catch {
         // 깨진 메시지 무시
@@ -210,6 +184,8 @@ while (true) {
   }
 }
 ```
+
+HTTP 오류, SSE error 또는 done 이전의 연결 종료는 성공한 답변으로 저장하지 않고 사용자에게 오류로 표시합니다.
 
 ### 왜 버퍼가 필요한가
 청크가 `\n\n` 경계를 가로질러 분할될 수 있습니다. 예:
@@ -237,8 +213,8 @@ ChatPanel 헤더의 "분석 보강" 버튼. 채팅 내역이 있을 때만 활�
 2. "보강하기" → `POST /api/papers/[id]/export` (SSE 스트리밍)
 3. AI가 기존 analysis.md + 채팅 기록을 읽고 문서 보강
 4. 진행 상황 오버레이 (tool activity 표시)
-5. 완료 시 하단 토스트 "분석 문서가 업데이트되었습니다"
-6. 사용자는 "분석" 탭에서 보강된 문서 확인
+5. 파일이 비어 있지 않고 실제로 변경되었는지 서버에서 확인한 뒤 완료 시 하단 토스트 "분석 문서가 업데이트되었습니다"
+6. 사용자는 "분석" 탭에서 보강된 문서 확인. 실행 실패나 변경 없는 결과는 오류로 표시
 
 ## 메시지 영속화
 
@@ -273,25 +249,23 @@ ChatPanel 헤더의 "분석 보강" 버튼. 채팅 내역이 있을 때만 활�
 `src/constants/models.ts`:
 ```typescript
 export const AVAILABLE_MODELS = [
-  { id: "claude-sonnet-4-6", label: "Sonnet" },
-  { id: "claude-opus-4-6", label: "Opus" },
+  { id: "default", label: "Codex (기본 모델)" },
 ] as const;
 
 export type ChatModelId = (typeof AVAILABLE_MODELS)[number]["id"];
-export const DEFAULT_CHAT_MODEL: ChatModelId = "claude-sonnet-4-6";
+export const DEFAULT_CHAT_MODEL: ChatModelId = "default";
 ```
 
-ChatPanel 헤더에 `<select>` 드롭다운으로 노출. 로딩 중에는 비활성화. 기본값은 Sonnet(더 빠름).
+ChatPanel 헤더에 `<select>` 드롭다운으로 노출. 로딩 중에는 비활성화. 기본값은 서버 CODEX_MODEL 또는 로컬 Codex 설정을 따릅니다.
 
 ## 응답 속도 관련
 
 첫 메시지는 느릴 수 있습니다. 이유:
-1. Claude가 `background/*.md`와 `analysis.md`를 먼저 읽어야 함 (Read/Glob tool-use 라운드트립)
-2. 이 과정에서는 text delta가 없음 (사용자는 loading dots + tool activity만 봄)
+1. Codex가 `background/*.md`와 `analysis.md`를 먼저 읽어야 함 (파일 읽기 tool-use 라운드트립)
+2. 이 과정에서는 완료된 응답 메시지가 없음 (사용자는 loading dots + tool activity만 봄)
 
 **완화책**:
 - Tool-use 진행 상황을 UI에 실시간 표시 (📖 ... 읽는 중) — 구현됨
-- 세션 resume으로 두 번째 메시지부터는 빠름 — 구현됨
-- 기본 모델을 Sonnet으로 — 구현됨
+- thread resume으로 이전 대화 맥락 재사용 — 구현됨
 
 더 빠르게 하려면 서버에서 background 파일을 미리 읽어 프롬프트에 주입하는 방법이 있지만, 첫 요청의 프롬프트 크기가 커지는 트레이드오프가 있습니다.

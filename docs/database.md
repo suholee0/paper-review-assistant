@@ -54,7 +54,7 @@ model Highlight {
 - `publishedDate` — 발행일 (nullable). arXiv API에서 추출. `YYYY-MM-DD` 형식 문자열
 - `url` — arXiv 또는 다른 URL (nullable, 로컬 PDF의 경우)
 - `filePath` — 로컬 PDF 경로. 빈 문자열일 수 있음 (다운로드 실패 시)
-- `chatSessionId` — Claude Agent SDK 세션 ID. 첫 채팅 후 저장, 이후 resume에 사용 (nullable)
+- `chatSessionId` — Codex thread ID를 `codex:<UUID>`로 저장. 성공한 첫 채팅 이후 resume에 사용 (nullable). 접두어 없는 이전 runtime ID는 새 thread로 전환
 - `createdAt` — 등록 시각
 - `highlights` — 1:N 관계. 논문 삭제 시 cascade
 
@@ -134,7 +134,7 @@ export function paperHasAnalysis(paperId: string): boolean {
 }
 ```
 
-`analysis.md` 파일 존재만으로 판단. Claude Code가 같이 읽기 워크플로우를 완료하면 이 파일을 작성합니다.
+`analysis.md` 파일 존재만으로 판단. Codex가 같이 읽기 워크플로우를 완료하면 이 파일을 작성합니다.
 
 ### 배경지식 토픽 목록
 `listBackgroundTopics(paperId)`:

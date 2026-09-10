@@ -88,7 +88,7 @@ describe("POST /api/chat", () => {
       title: "Test",
       url: null,
       filePath: "/papers/paper-2/original.pdf",
-      chatSessionId: "existing-session",
+      chatSessionId: "codex:12345678-1234-1234-1234-123456789abc",
       createdAt: new Date(),
     };
 
@@ -97,7 +97,7 @@ describe("POST /api/chat", () => {
     const { getAIProvider } = await import("@/lib/ai/provider");
     const mockQuery = vi.fn(async function* () {
       yield { type: "text" as const, content: "Response" };
-      yield { type: "done" as const, sessionId: "existing-session" };
+      yield { type: "done" as const, sessionId: "codex:12345678-1234-1234-1234-123456789abc" };
     });
     (getAIProvider as ReturnType<typeof vi.fn>).mockReturnValue({ query: mockQuery });
 
@@ -120,8 +120,31 @@ describe("POST /api/chat", () => {
     expect(mockQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         prompt: expect.stringContaining("The attention mechanism allows..."),
-        sessionId: "existing-session",
+        sessionId: "codex:12345678-1234-1234-1234-123456789abc",
       })
     );
   });
+  it("starts a fresh Codex conversation for an old runtime ID and replaces it only on success", async () => {
+    (prisma.paper.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "paper-3", url: "https://example.com/paper.pdf", filePath: "", chatSessionId: "old-runtime-session" });
+    const { getAIProvider } = await import("@/lib/ai/provider");
+    const sessionId = "codex:12345678-1234-1234-1234-123456789abc";
+    const query = vi.fn(async function* () { yield { type: "done" as const, sessionId }; });
+    vi.mocked(getAIProvider).mockReturnValue({ query });
+    const { POST } = await import("@/app/api/chat/route");
+    const response = await POST(new Request("http://localhost/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paperId: "paper-3", message: "hi", model: "unavailable-model" }) }) as any);
+    await response.text();
+    expect(query).toHaveBeenCalledWith(expect.objectContaining({ sessionId: undefined, access: "read-only", webSearch: true, model: "default", prompt: expect.stringContaining("https://example.com/paper.pdf") }));
+    expect(prisma.paper.update).toHaveBeenCalledWith({ where: { id: "paper-3" }, data: { chatSessionId: sessionId } });
+  });
+
+  it("forwards runtime errors without saving a new session", async () => {
+    (prisma.paper.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "paper-4", url: null, filePath: "/paper.pdf", chatSessionId: null });
+    const { getAIProvider } = await import("@/lib/ai/provider");
+    vi.mocked(getAIProvider).mockReturnValue({ query: vi.fn(async function* () { yield { type: "error" as const, message: "Codex login required" }; }) });
+    const { POST } = await import("@/app/api/chat/route");
+    const response = await POST(new Request("http://localhost/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ paperId: "paper-4", message: "hi" }) }) as any);
+    expect(await response.text()).toContain("Codex login required");
+    expect(prisma.paper.update).not.toHaveBeenCalled();
+  });
+
 });

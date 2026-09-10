@@ -1,26 +1,16 @@
-# Skim Paper
+# 전체 Paper Skim
 
-You are an expert research assistant. Your task is to skim a paper and identify the background knowledge needed to deeply understand it.
+입력: `{{paperSource}}`, 등록 결과의 `{{paperDir}}`.
 
-## Input
-
-Paper: {{paperSource}}
-
-## Instructions
-
-1. Read the paper thoroughly — use the URL to find and read the HTML version, or read the file at the given path
-2. Identify all concepts, techniques, and prior works that a reader needs to understand to fully grasp this paper
-3. For each concept, provide a brief (1 sentence) description of why it's needed
-
-## Output Format
-
-Return a JSON array of topics. Each topic has a "name" (short identifier, used as filename) and "description" (why this concept is needed for understanding this paper). Example:
+1. `skills/read-paper.md`에 따라 논문 전체(본문·결론·참고문헌·부록)를 읽는다. 원문 섹션 목록과 페이지 범위를 기록한다.
+2. 독자가 논문을 이해하는 데 필요한 개념, 기법, 선행 연구를 식별한다. 논문의 실제 사용 위치와 필요성을 설명한다.
+3. 중복 개념은 합치고 배경지식과 논문 고유의 기여를 구분한다. 토픽 수를 맞추기 위해 불필요한 항목을 만들지 않는다.
+4. 다음 형식의 JSON 배열만 반환한다. 상위 workflow가 `{{paperDir}}/topics.json`에 저장한다.
 
 ```json
 [
-  {"name": "self-attention", "description": "Core mechanism used in the transformer architecture proposed in this paper"},
-  {"name": "seq2seq", "description": "The existing paradigm this paper aims to improve upon"}
+  {"name": "self-attention", "description": "방법론 섹션의 토큰 간 상호작용을 이해하는 데 필요한 연산"}
 ]
 ```
 
-Return ONLY the JSON array, no other text.
+name은 파일명으로 사용하는 중복 없는 `a-z`, `0-9`, 하이픈 조합이다. description은 한국어 한 문장이다. 원문 일부를 읽지 못했으면 메인에 먼저 알려 해결하고, 불완전한 skim을 완성된 결과로 제출하지 않는다.

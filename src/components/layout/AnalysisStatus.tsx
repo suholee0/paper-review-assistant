@@ -26,7 +26,7 @@ export default function AnalysisStatus({ paperId }: Props) {
   if (!status.analyzed && status.backgroundTopics.length === 0) {
     return (
       <div className="p-3 border-b bg-amber-50 text-sm text-amber-800">
-        아직 같이 읽기를 하지 않았습니다. Claude Code 터미널에서 같이 읽기를 시작하세요.
+        분석이 아직 완료되지 않았습니다. Codex 대화에서 이 논문을 같이 읽어 달라고 요청하세요.
       </div>
     );
   }
