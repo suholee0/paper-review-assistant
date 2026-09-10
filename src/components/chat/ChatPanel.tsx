@@ -73,13 +73,20 @@ export default function ChatPanel({ paperId, selectedText, onClearSelection }: P
           }),
         });
 
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.error || `요청 실패 (HTTP ${response.status})`);
+        }
+
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
 
-        if (!reader) return;
+        if (!reader) throw new Error("응답 스트림이 없습니다.");
 
         let fullContent = "";
         let buffer = "";
+        let streamError = "";
+        let completed = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -102,6 +109,10 @@ export default function ChatPanel({ paperId, selectedText, onClearSelection }: P
                   setToolActivity(null);
                 } else if (data.type === "tool_use") {
                   setToolActivity(data.summary);
+                } else if (data.type === "error") {
+                  streamError = data.message || "Codex 응답에 실패했습니다.";
+                } else if (data.type === "done") {
+                  completed = true;
                 }
               } catch {
                 // skip malformed messages
@@ -110,19 +121,23 @@ export default function ChatPanel({ paperId, selectedText, onClearSelection }: P
           }
         }
 
+        if (streamError) throw new Error(streamError);
+        if (!completed) throw new Error("응답이 완료되기 전에 연결이 종료되었습니다.");
+
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: fullContent, timestamp: new Date() },
         ]);
         setStreamingContent("");
         setToolActivity(null);
-      } catch {
+      } catch (error) {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: "Error: Failed to get response.", timestamp: new Date() },
+          { role: "assistant", content: `오류: ${error instanceof Error ? error.message : "응답에 실패했습니다."}`, timestamp: new Date() },
         ]);
       } finally {
         setIsLoading(false);
+        setStreamingContent("");
         setToolActivity(null);
       }
     },

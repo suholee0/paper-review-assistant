@@ -1,31 +1,21 @@
-# Build Background Knowledge
+# Background Knowledge 조사
 
-You are an expert research assistant. Your task is to write a compact background knowledge document about a specific topic, tailored to help a reader understand a particular paper.
+입력: `{{topicName}}`, `{{topicDescription}}`, `{{paperSource}}`, 논문 맥락 및 `{{outputPath}}`.
 
-## Input
+1. AGENTS.md의 문서 규칙을 따른다. 현재 웹 검색 도구로 조사하고 검색 결과에서 실제 출처를 연다.
+2. 원 논문, 공식 문서 등 1차 자료를 우선한다. 확인하지 않은 URL이나 인용을 만들지 않는다. 확인한 출처가 부족하면 한계를 보고한다.
+3. 논문의 사용 맥락에 맞춰 한국어 치트시트를 작성한다. 원문 주장과 자신의 해석을 구분한다.
+4. 아래 구조로 정확히 `{{outputPath}}`에 저장한다. 다른 토픽이나 공유 파일은 수정하지 않는다.
 
-Topic: {{topicName}}
-Topic description: {{topicDescription}}
-Paper: {{paperSource}}
-Output path: {{outputPath}}
+## 문서 구조
 
-## Instructions
+- `# <Topic>`
+- `## What it is`: 3–5개의 짧은 문단으로 설명
+- `## Why it exists`: 해결하려는 문제와 기존 방식의 한계
+- `## Key formulas/concepts`: 필요한 수식, 기호 정의, 핵심 개념
+- `## Relevance to the paper`: 대상 논문의 어느 섹션/페이지에서 어떻게 쓰이는지
+- `## Sources`: 직접 열어 확인한 출처의 제목과 Markdown 링크
 
-1. Research this topic using web search — find authoritative sources, tutorials, key papers
-2. Write a compact reference document (NOT a textbook chapter — a cheat sheet)
-3. Save the document to the output path
+2–3분 안에 읽을 수 있는 분량을 목표로 한다. 출처를 해당 주장 옆에도 연결한다. 수식은 `$...$`, `$$...$$`를 사용하고 표 안의 수직선은 AGENTS.md 규칙을 따른다.
 
-## Document Structure
-
-Write the document in Markdown with these sections:
-
-- **What it is** (3-5 paragraphs): Clear explanation of the concept
-- **Why it exists**: What problem it solves, limitations of prior approaches
-- **Key formulas/concepts**: Core mathematical or algorithmic ideas (if applicable)
-- **Relevance to the paper**: How this concept is used in the context of the target paper
-
-Keep it compact. The reader should be able to skim this in 2-3 minutes and understand enough to follow the paper.
-
-## Output
-
-Save the document to {{outputPath}}. Confirm by writing: DONE: {{topicName}}
+완료 시 `DONE: {{topicName}}`와 저장 경로, 핵심 출처, 확인하지 못한 사항을 메인에 보고한다. 문서 저장이 실패하면 완료라고 하지 않는다.

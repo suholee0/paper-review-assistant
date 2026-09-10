@@ -9,12 +9,15 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "paper:register": "tsx scripts/register-paper.ts",
-    "paper:serve": "tsx scripts/serve.ts",
-    "paper:list": "tsx scripts/list-papers.ts"
+    "paper:register": "node --import tsx scripts/register-paper.ts",
+    "paper:serve": "node --import tsx scripts/serve.ts",
+    "paper:list": "node --import tsx scripts/list-papers.ts",
+    "paper:read": "node scripts/read-paper.mjs",
+    "paper:check": "node --import tsx scripts/check-paper.ts",
+    "test:codex": "node --import tsx scripts/smoke-codex.ts"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.104",
+    "@openai/codex-sdk": "0.154.0",
     "@prisma/client": "^6.6.0",
     "katex": "^0.16.45",
     "next": "^15.3.0",
@@ -44,5 +47,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

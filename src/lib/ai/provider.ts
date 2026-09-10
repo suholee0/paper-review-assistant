@@ -1,4 +1,4 @@
-import { ClaudeAgentProvider } from "./claude-agent";
+import { CodexProvider } from "./codex";
 
 export type AIResponse =
   | { type: "text"; content: string }
@@ -11,7 +11,9 @@ export interface AIQueryOptions {
   prompt: string;
   sessionId?: string;
   cwd?: string;
-  allowedTools?: string[];
+  access?: "read-only" | "workspace-write";
+  webSearch?: boolean;
+  signal?: AbortSignal;
   model?: string;
 }
 
@@ -23,7 +25,7 @@ let instance: AIProvider | null = null;
 
 export function getAIProvider(): AIProvider {
   if (!instance) {
-    instance = new ClaudeAgentProvider();
+    instance = new CodexProvider();
   }
   return instance;
 }

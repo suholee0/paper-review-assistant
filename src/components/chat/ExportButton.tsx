@@ -13,6 +13,7 @@ export default function ExportButton({ paperId, messages }: Props) {
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleExport = useCallback(async () => {
     if (messages.length === 0) return;
@@ -20,6 +21,7 @@ export default function ExportButton({ paperId, messages }: Props) {
     setExporting(true);
     setProgress("분석 문서 보강 중...");
     setDone(false);
+    setError(null);
 
     try {
       const res = await fetch(`/api/papers/${paperId}/export`, {
@@ -34,11 +36,18 @@ export default function ExportButton({ paperId, messages }: Props) {
         }),
       });
 
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `요청 실패 (HTTP ${res.status})`);
+      }
+
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
-      if (!reader) return;
+      if (!reader) throw new Error("응답 스트림이 없습니다.");
 
       let buffer = "";
+      let completed = false;
+      let streamError = "";
       while (true) {
         const { done: streamDone, value } = await reader.read();
         if (streamDone) break;
@@ -55,24 +64,26 @@ export default function ExportButton({ paperId, messages }: Props) {
             if (data.type === "tool_use") {
               setProgress(data.summary);
             } else if (data.type === "done") {
-              setDone(true);
+              completed = true;
             } else if (data.type === "error") {
-              setProgress(`오류: ${data.message}`);
+              streamError = data.message || "문서 보강에 실패했습니다.";
             }
           } catch {
             // skip
           }
         }
       }
-    } catch {
-      setProgress("보강 실패");
+      if (streamError) throw new Error(streamError);
+      if (!completed) throw new Error("문서 보강이 완료되기 전에 연결이 종료되었습니다.");
+      setDone(true);
+      setTimeout(() => setDone(false), 3000);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "보강 실패");
     } finally {
       setExporting(false);
       setProgress(null);
-      // Auto-dismiss success after 3s
-      if (done) setTimeout(() => setDone(false), 3000);
     }
-  }, [paperId, messages, done]);
+  }, [paperId, messages]);
 
   return (
     <>
@@ -124,7 +135,13 @@ export default function ExportButton({ paperId, messages }: Props) {
         </div>
       )}
 
-      {/* Success toast */}
+      {/* Result messages */}
+      {error && (
+        <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-red-700 text-white text-sm px-4 py-2 rounded-lg shadow-lg">
+          {error}
+          <button onClick={() => setError(null)} className="ml-3 underline">닫기</button>
+        </div>
+      )}
       {done && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] bg-green-600 text-white text-sm px-4 py-2 rounded-lg shadow-lg">
           분석 문서가 업데이트되었습니다. &ldquo;분석&rdquo; 탭에서 확인하세요.

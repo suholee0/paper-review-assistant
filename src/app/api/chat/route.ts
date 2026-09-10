@@ -4,8 +4,9 @@ import { getAIProvider } from "@/lib/ai/provider";
 import { getPaperDir } from "@/lib/papers";
 import { sseEncode } from "@/lib/sse";
 import { AVAILABLE_MODELS, DEFAULT_CHAT_MODEL } from "@/constants/models";
+import { codexThreadId } from "@/lib/ai/session";
 
-const CHAT_ALLOWED_TOOLS = ["Read", "Glob", "Grep", "WebSearch", "WebFetch"];
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   let prompt = "";
 
-  if (!paper.chatSessionId) {
+  if (!codexThreadId(paper.chatSessionId)) {
     const paperSource = paper.url || paper.filePath;
     prompt += `You are a knowledgeable research assistant helping a user understand a paper.\n\n`;
     prompt += `Paper: ${paperSource}\n`;
@@ -52,10 +53,12 @@ export async function POST(request: NextRequest) {
       try {
         for await (const chunk of provider.query({
           prompt,
-          sessionId: paper.chatSessionId || undefined,
+          sessionId: codexThreadId(paper.chatSessionId) ? paper.chatSessionId! : undefined,
           cwd: paperDir,
           model: chatModel,
-          allowedTools: CHAT_ALLOWED_TOOLS,
+          access: "read-only",
+          webSearch: true,
+          signal: request.signal,
         })) {
           if (chunk.type === "text") {
             controller.enqueue(encoder.encode(sseEncode({ type: "text", content: chunk.content })));
@@ -68,7 +71,7 @@ export async function POST(request: NextRequest) {
             })));
           }
           if (chunk.type === "done" && chunk.sessionId) {
-            if (!paper.chatSessionId) {
+            if (paper.chatSessionId !== chunk.sessionId) {
               await prisma.paper.update({
                 where: { id: paper.id },
                 data: { chatSessionId: chunk.sessionId },

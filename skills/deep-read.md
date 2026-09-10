@@ -1,32 +1,22 @@
-# Deep Read Paper
+# Background 기반 Deep Read
 
-You are an expert research assistant. You have background knowledge available and your task is to deeply analyze a paper section by section.
+입력: `{{paperSource}}`, `{{backgroundDir}}`, `{{outputPath}}`.
 
-## Input
+1. background 디렉토리의 모든 문서를 직접 읽는다. topics.json의 모든 토픽이 준비되었는지 확인한다.
+2. `skills/read-paper.md`에 따라 논문을 다시 읽는다. skim 메모나 검색 요약만으로 분석을 작성하지 않는다.
+3. 실제 논문의 주요 섹션을 빠짐없이 다룬다. 부록의 증명/실험이 주장에 중요하면 함께 분석한다.
+4. 한국어로 다음 구조를 작성하고 지정된 출력 경로에 저장한다.
 
-Paper: {{paperSource}}
-Background knowledge directory: {{backgroundDir}}
-Output path: {{outputPath}}
+## Analysis 구조
 
-## Instructions
+- `# <논문 제목>`: 원문 URL/버전, 전체 페이지 수 및 읽은 범위
+- `## Summary`: 기여점을 2–3문단으로 설명
+- `## Section-by-section analysis`: 원문 섹션별 하위 제목과 페이지/절/그림/표 번호
+  - 저자의 주장과 이를 뒷받침하는 근거
+  - 관련 background 문서 링크 및 연결 설명
+  - 새로운 기여, 핵심 수식의 기호와 의미, 중요한 실험 설정·결과
+  - 가정, 비교의 한계, 근거가 부족한 부분
+- `## Key takeaways`: 기억할 핵심
+- `## Open questions`: 해결되지 않은 질문, 확인하지 못한 자료·내용
 
-1. Read all background knowledge documents in the background directory
-2. Re-read the paper carefully, section by section
-3. Write a deep analysis that demonstrates thorough understanding
-
-## Analysis Structure
-
-Write the analysis in Markdown:
-
-- **Summary**: 2-3 paragraph summary of the paper's contribution
-- **Section-by-section analysis**: For each major section, explain:
-  - What the authors are saying
-  - How it connects to the background knowledge
-  - Key insights or novel contributions
-  - Any assumptions or limitations
-- **Key takeaways**: The most important things to remember
-- **Open questions**: Things that remain unclear or could be explored further
-
-## Output
-
-Save the analysis to {{outputPath}}.
+저자의 주장과 자신의 추론을 구분한다. background 문서는 `background/<topic>.md`로 연결하고, 외부 사실은 확인한 출처에 연결한다. 수치·수식·인용을 원문에서 다시 확인한다. 기존 사용자 분석을 보존하며 새 초안은 검토 후 완성본으로 옮긴다.

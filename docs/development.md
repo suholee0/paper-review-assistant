@@ -3,15 +3,16 @@
 ## 환경 설정
 
 ### 요구 사항
-- Node.js 18+
+- Node.js 22+
 - npm
-- Claude Code 설치 및 로그인
+- Codex 세션 (분석)
+- 웹 서버 사용자 환경의 Codex 인증 (`npx --no-install codex login`)
 
 ### 초기 설정
 ```bash
 git clone <repo-url>
-cd paper-review-tool
-npm install
+cd paper-review-assistant
+npm ci
 npx prisma db push
 ```
 
@@ -40,7 +41,7 @@ npm run paper:list
 
 ```
 paper-review-tool/
-├── CLAUDE.md              # Claude Code 프로젝트 가이드
+├── AGENTS.md              # Codex 프로젝트 가이드
 ├── README.md
 ├── package.json
 ├── tsconfig.json
@@ -51,7 +52,7 @@ paper-review-tool/
 ├── vitest.config.ts
 ├── prisma/
 │   └── schema.prisma
-├── skills/                # Claude Code 스킬 (markdown)
+├── skills/                # Codex가 참조하는 작업 지침 (markdown)
 │   ├── read-together.md   # 같이 읽기 워크플로우 (메인)
 │   ├── skim.md            # Phase 1 개별 스킬
 │   ├── build-background.md # Phase 2 개별 스킬
@@ -141,7 +142,7 @@ __tests__/
 ### 작성 가이드
 - **Vitest** 사용
 - API 라우트는 request 객체를 모킹해서 호출
-- Prisma는 실제 DB(SQLite)에 연결하여 통합 테스트
+- API 테스트의 Prisma/DB 호출은 모킹하고 파일 검사는 테스트용 디렉토리 사용
 - AI provider는 모킹
 
 ### 실행
@@ -150,8 +151,9 @@ npm test              # 단일 실행
 npm run test:watch    # watch 모드
 ```
 
-### 알려진 이슈
-`__tests__/api/papers.test.ts`와 `__tests__/api/chat.test.ts`에서 `Request` → `NextRequest` 타입 캐스팅 관련 타입 에러가 있습니다. 테스트는 런타임에 정상 동작합니다.
+### 실제 SDK smoke test (선택)
+
+`npm run test:codex`는 로그인된 Codex를 사용해 임시 파일 읽기·thread 재개·문서 보강을 확인합니다. 실제 모델 요청 3회가 발생하므로 일반 CI에서는 `npm test`와 `npm run build`만 실행합니다. shell 환경의 CODEX_MODEL/CODEX_PATH를 사용하며 `.env.local`은 자동 로드하지 않습니다. 임시 파일은 정리하지만 thread 기록은 Codex 저장소에 남습니다. 자세한 인증·실행 절차는 [README](../README.md#테스트와-빌드)를 참고하세요.
 
 ## 빌드 캐시 이슈
 
@@ -191,9 +193,9 @@ npx prisma generate
 - PDF 안 보임 — `/api/papers/[id]/pdf` 응답 확인, `filePath`가 빈 문자열은 아닌지 확인
 
 ### 채팅 응답 없음
-- 터미널에 `[claude-agent]`, `[claude]` 로그 확인
+- UI의 오류 메시지와 서버 로그 확인
 - 첫 메시지는 tool-use 때문에 느릴 수 있음 (배경지식 파일 읽기)
-- Claude Code 로그인 상태 확인: `claude --version`
+- Codex 로그인 상태 확인: `npx --no-install codex login status`
 
 ### 하이라이트가 이상한 위치에
 - 과거 버전에서 저장한 하이라이트라면 좌표가 첫 페이지 기준일 수 있음
@@ -209,7 +211,7 @@ npx prisma generate
 ### 핵심
 - `next` `^15.3` — 프레임워크
 - `react` `^19` — UI
-- `@anthropic-ai/claude-agent-sdk` — AI
+- `@openai/codex-sdk` — AI
 - `@prisma/client` + `prisma` — DB
 - `react-pdf` + `pdfjs-dist` — PDF
 

@@ -9,11 +9,12 @@ if ! command -v node &> /dev/null; then
   exit 1
 fi
 
+node -e 'if (Number(process.versions.node.split(".")[0]) < 22) { console.error("Node.js 22+ is required."); process.exit(1); }'
 echo "Node.js $(node --version)"
 
 # Install dependencies
 echo "Installing dependencies..."
-npm install
+npm ci
 
 # Initialize database
 echo "Setting up database..."
@@ -21,5 +22,6 @@ npx prisma db push
 
 echo ""
 echo "Setup complete! Start with:"
-echo "  claude"
+echo "  npx --no-install codex login"
+echo "  npx --no-install codex"
 echo "  > 이 논문 같이 읽자: https://arxiv.org/abs/1706.03762"

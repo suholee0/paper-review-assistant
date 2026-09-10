@@ -1,3 +1,5 @@
+> 과거 Claude 중심 구현의 검토 기록입니다. 현재 실행 구조는 [architecture.md](architecture.md), 현재 에이전트 지침은 [AGENTS.md](../AGENTS.md)를 따릅니다.
+
 # Public Release 전 수정 필요 사항
 
 > 작성일: 2026-04-13

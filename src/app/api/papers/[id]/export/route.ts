@@ -6,7 +6,7 @@ import { sseEncode } from "@/lib/sse";
 import fs from "fs";
 import path from "path";
 
-const EXPORT_ALLOWED_TOOLS = ["Read", "Write", "Glob", "Grep"];
+export const runtime = "nodejs";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -22,6 +22,11 @@ export async function POST(
   const { messages } = body as {
     messages: { role: string; content: string; context?: string }[];
   };
+  if (!Array.isArray(messages) || messages.length === 0 || messages.some((message) =>
+    !message || !["user", "assistant"].includes(message.role) || typeof message.content !== "string"
+  )) {
+    return new Response(JSON.stringify({ error: "messages must be a non-empty conversation" }), { status: 400 });
+  }
 
   const paper = await prisma.paper.findUnique({ where: { id } });
   if (!paper) {
@@ -88,7 +93,9 @@ ${chatLog}
         for await (const chunk of provider.query({
           prompt,
           cwd: paperDir,
-          allowedTools: EXPORT_ALLOWED_TOOLS,
+          access: "workspace-write",
+          webSearch: false,
+          signal: request.signal,
         })) {
           if (chunk.type === "text") {
             controller.enqueue(
@@ -107,6 +114,10 @@ ${chatLog}
             const updated = fs.existsSync(analysisPath)
               ? fs.readFileSync(analysisPath, "utf-8")
               : "";
+            if (!updated.trim() || updated === currentAnalysis) {
+              controller.enqueue(encoder.encode(sseEncode({ type: "error", message: "분석 문서 변경을 확인하지 못했습니다. 기존 파일을 확인하고 다시 시도하세요." })));
+              continue;
+            }
             controller.enqueue(
               encoder.encode(sseEncode({ type: "done", content: updated }))
             );
